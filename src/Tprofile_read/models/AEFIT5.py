@@ -157,17 +157,16 @@ class Relevance1D(tf.keras.layers.Dropout):
         return input_shape
 
     def get_config(self):
-        config = {
-            'activation': tf.keras.activations.serialize(self.activation),
-            'kernel_initializer': tf.keras.initializers.serialize(self.kernel_initializer),
-            'kernel_constraint': tf.keras.constraints.serialize(self.kernel_constraint),
-        }
-        base_config = super(Relevance1D, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        # config = {
+        #     'activation': tf.keras.activations.serialize(self.activation),
+        #     'kernel_initializer': tf.keras.initializers.serialize(self.kernel_initializer),
+        #     'kernel_constraint': tf.keras.constraints.serialize(self.kernel_constraint),
+        # }
+        base_config = super(tf.keras.layers.Dropout, self).get_config()
+        # return dict(list(base_config.items()) + list(config.items()))
+        return dict(list(base_config.items()))
 
 
-
-tf.keras.layers.Dropout
 
 
 """
@@ -303,7 +302,7 @@ class AEFIT5(models.base.VAE):
         if self.bypass:
             XY = 0.*XY + xy # add dummy gradients passing through the ops
             kl_loss = 0.
-        self.add_loss( self.beta * kl_loss )
+        self.add_loss(lambda: self.beta * kl_loss )
         return XY
 
     def train_step(self, data, training=True):
@@ -337,7 +336,6 @@ class AEFIT5(models.base.VAE):
 
     def compute_mse_loss(self, xy, XY):
         return tf.losses.mse(y_pred=XY, y_true=xy)
-
 
 
     def recover(self,x):
