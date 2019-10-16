@@ -1,6 +1,4 @@
 
-
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -98,8 +96,6 @@ class RelUnitNorm(tf.keras.constraints.Constraint):
         return {'axis': self.axis}
 
 
-tf.keras.Model.fit
-
 class Relevance1D(tf.keras.layers.Dropout):
     def __init__(self,
                 activation=None,
@@ -183,8 +179,7 @@ class AEFIT5(models.base.VAE):
     '''    
     def __init__(self, feature_dim=40, latent_dim=2, dprate=0., activation=tf.nn.relu, beta=1., 
                  geometry=[20,20,10], scale=1, *args, **kwargs):
-        self.super = super(AEFIT5, self)
-        self.super.__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.latent_dim = latent_dim
         self.feature_dim = feature_dim        
         self.dprate = dprate
@@ -193,16 +188,13 @@ class AEFIT5(models.base.VAE):
         self.beta = tf.Variable(beta, dtype=tf.float32, name='beta', trainable=False)
         self.apply_sigmoid = False
         self.bypass = False
-        
-        inference_net, generative_net = self.set_model(feature_dim, latent_dim, 
-                                                        dprate=dprate,
-                                                        scale=scale, 
-                                                        activation=activation,
-                                                        geometry=geometry)
-        self.inference_net = inference_net
-        self.generative_net = generative_net        
-        # self.build(input_shape=inference_net.input_shape)
-        self.output_names = generative_net.output_names
+        self.set_model(feature_dim, latent_dim, 
+                            dprate=dprate,
+                            scale=scale, 
+                            activation=activation,
+                            geometry=geometry)
+
+        self.output_names = self.generative_net.output_names
         self.compile(
             optimizer  = tf.keras.optimizers.Adam(learning_rate=1e-3),
             loss       = self.compute_mse_loss,
@@ -210,9 +202,9 @@ class AEFIT5(models.base.VAE):
             # logit_loss = True,
             # metrics    = ['accuracy']
         )
-        print('AEFIT5 a ready:')
+        print('AEFIT5 ready:')
 
-
+ 
     
     def set_model(self, feature_dim, latent_dim, dprate=0., activation=tf.nn.relu, 
                   geometry=[20,20,10], scale=1):
@@ -237,7 +229,7 @@ class AEFIT5(models.base.VAE):
                 self.add(tf.keras.layers.Dense(fdim*size*scale, activation=activation))
                 self.add(tf.keras.layers.Dropout(dprate))
             if len(geometry) == 0: initializer = LsInitializer()
-            else : initializer = None
+            else : initializer = None            
             self.add(tf.keras.layers.Dense(ldim, activation='linear', use_bias=False, kernel_initializer=initializer))
             return self
 
@@ -268,6 +260,8 @@ class AEFIT5(models.base.VAE):
             #tf.keras.layers.Dense(latent_dim)
         ]).add_dense_decode(geometry=geometry[::-1])
         
+        self.inference_net = inference_net
+        self.generative_net = generative_net        
         return inference_net, generative_net
 
     @tf.function
@@ -302,7 +296,7 @@ class AEFIT5(models.base.VAE):
         if self.bypass:
             XY = 0.*XY + xy # add dummy gradients passing through the ops
             kl_loss = 0.
-        self.add_loss(lambda: self.beta * kl_loss )
+        self.add_loss(self.beta * kl_loss )
         return XY
 
     def train_step(self, data, training=True):
@@ -327,7 +321,7 @@ class AEFIT5(models.base.VAE):
             loss_wrapper = lambda xy,XY: loss( tf.where(tf.math.is_nan(xy), tf.zeros_like(xy), xy), 
                                                tf.where(tf.math.is_nan(xy), tf.zeros_like(XY), XY))
             # loss_wrapper = self.vae_loss(loss)
-        return self.super.compile(optimizer, loss=loss_wrapper, metrics=metrics, **kwargs)
+        return super().compile(optimizer, loss=loss_wrapper, metrics=metrics, **kwargs)
     
     def compute_cross_entropy_loss(self, xy, XY):
         crossen =  tf.nn.sigmoid_cross_entropy_with_logits(logits=XY, labels=xy)
@@ -336,7 +330,6 @@ class AEFIT5(models.base.VAE):
 
     def compute_mse_loss(self, xy, XY):
         return tf.losses.mse(y_pred=XY, y_true=xy)
-
 
     def recover(self,x):
         xr = self.call(x, training=False)

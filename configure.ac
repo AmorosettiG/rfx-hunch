@@ -95,16 +95,16 @@ LT_INIT()
 m4_sinclude(conf/kscripts/build_common.ac)
 
 ## TOOLCHAIN ##
-m4_sinclude(conf/kscripts/toolchain.ac)
+# m4_sinclude(conf/kscripts/toolchain.ac)
 
 ## CODAC ##
 # m4_sinclude(conf/kscripts/iter_codac.ac)
 
 ## QT ##
-m4_sinclude(conf/kscripts/qtdesktop.ac)
+# m4_sinclude(conf/kscripts/qtdesktop.ac)
 
 ## NODEJS ##
-m4_sinclude(conf/kscripts/nodejs.ac)
+# m4_sinclude(conf/kscripts/nodejs.ac)
 
 ## DOXYGEN ##
 m4_sinclude(conf/autoconf-doxygen/doxygen.ac)
@@ -119,7 +119,7 @@ m4_sinclude(conf/autoconf-doxygen/doxygen.ac)
 # m4_sinclude(conf/kscripts/ext_ccStickers.ac)
 
 ## EXT_NODEJS_NODE ##
-m4_sinclude(conf/kscripts/ext_nodejs_node.ac)
+# m4_sinclude(conf/kscripts/ext_nodejs_node.ac)
 
 ## EXT_MDSPLUS ##
 m4_sinclude(conf/kscripts/ext_mdsplus.ac)
@@ -155,11 +155,6 @@ AC_CONFIG_FILES(
                  Makefile
 				 .gitignore
 				 .examples/Makefile
-				 .examples/qt_example/Makefile
-				 .examples/sh_template/Makefile
-				 .examples/parse_examples/Makefile
-				 .examples/nodejs/Makefile				 
-				 .examples/project_variables/Makefile
 				 .examples/mds_example/Makefile
 				 doc/Makefile
 				 ext/Makefile

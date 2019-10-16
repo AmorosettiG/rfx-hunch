@@ -5,9 +5,8 @@ export PYTHON_PACKAGES
 export PYTHONPATH
 export PYTHONUSERBASE
 
-PYTHON_PACKAGES = pip six numpy wheel mock # python packages needed for tf
+PYTHON_PACKAGES = six numpy wheel mock # python packages needed for tf
 PYTHONPATH = $(abs_top_builddir)/conf/python/site-packages/lib/python3.6/site-packages/:/usr/local/lib/python3.6/dist-packages:/usr/lib/python3.6/site-packages/:$(abs_srcdir)
-
 
 ##    .########.########.##....##..######...#######..########..########.##........#######..##......##  
 ##    ....##....##.......###...##.##....##.##.....##.##.....##.##.......##.......##.....##.##..##..##  
@@ -17,8 +16,7 @@ PYTHONPATH = $(abs_top_builddir)/conf/python/site-packages/lib/python3.6/site-pa
 ##    ....##....##.......##...###.##....##.##.....##.##....##..##.......##.......##.....##.##..##..##  
 ##    ....##....########.##....##..######...#######..##.....##.##.......########..#######...###..###.  
 
-DOWNLOADS = tensorflow
-
+DOWNLOADS = tensorflow_src
 tensorflow_src: ##@tf download git tensorflow code (master)
 tensorflow_src_URL    = https://github.com/tensorflow/tensorflow.git
 tensorflow_src_BRANCH = master
@@ -34,7 +32,6 @@ tf-init: DOCKER_MOUNTS = dist-packages:/usr/local/lib/python3.6/dist-packages
 tf-init: DOCKER_PORTS = 8888:8888 6006:6006
 tf-init: pip-install | tensorflow_src
 	@ :; 
-
 
 # MDSplus setup to access Analisys variables (offline)
 # RUN_PREQUEL = treeSetSource A inProgress;
@@ -89,7 +86,8 @@ PYSCRIPTS = examples/AEFIT_qsh.py
 runpy: ##@jp Run ipython console starting by script defined in $NAME or $PYSCRIPTS
 runpy: DOCKER_CONTAINER = tf-build
 runpy: $(NAME) $(PYSCRIPTS) te_db_1.npy | pip-install
-	@ $(RUN_PREQUEL) ipython -i $< $(ARGS)
+	@ $(info RUNNING: $<)
+	  $(RUN_PREQUEL) ipython -i $< $(ARGS)
 
 DOCKER_TARGETS += jupyter
 jupyter: DOCKER_CONTAINER = tf-build
@@ -110,39 +108,48 @@ rdipietro_DIR = $(srcdir)/jpnb/rdipietro
 
 
 
-## .########.########....##..
-## ....##....##........####..
-## ....##....##..........##..
-## ....##....######......##..
-## ....##....##..........##..
-## ....##....##..........##..
-## ....##....##........######
-
-# DOCKER_TARGETS += tf1-%
-# tf1-%: DOCKER_CONTAINER = tf1-stable
 
 
-# #IMAGE: tensorflow/tensorflow:nightly-devel-py3
-# tf1-init: ##@tf build process
-# tf1-init: DOCKER_IMAGE = tf-stable-py3
-# tf1-init: DOCKER_URL = $(srcdir)/docker_v1
-# tf1-init: DOCKER_MOUNTS = dist-packages-v1:/usr/local/lib/python3.5/dist-packages
-# # tf1-init: DOCKER_PORTS = 8888
-# tf1-init: 
-# 	@ :; 
-
-# tf1-shell: ##@tf enter container with shell (bash)
-# tf1-shell: tf1-init
-# 	@ bash -l
 
 
-# runpy_v1 tf1-%: PYTHONPATH = $(abs_srcdir)
+# .########.########....##..
+# ....##....##........####..
+# ....##....##..........##..
+# ....##....######......##..
+# ....##....##..........##..
+# ....##....##..........##..
+# ....##....##........######
 
-# DOCKER_TARGETS += runpy_v1
-# runpy_v1: ##@jp Run ipython console starting by script defined in $NAME or $PYSCRIPTS
-# runpy_v1: DOCKER_CONTAINER = tf1-stable
-# runpy_v1: $(NAME) examples/AEFIT_dummy_v1.py te_db_1.npy | pip-install
-# 	@ ipython3 -i $< $(ARGS)
+DOCKER_TARGETS += tf1-%
+tf1-%: DOCKER_CONTAINER = tf1-stable
+
+
+#IMAGE: tensorflow/tensorflow:nightly-devel-py3
+tf1-init: ##@tf build process
+tf1-init: DOCKER_IMAGE = tf-stable-py3
+tf1-init: DOCKER_URL = $(srcdir)/docker_v1
+tf1-init: DOCKER_MOUNTS = dist-packages-v1:/usr/local/lib/python3.5/dist-packages
+# tf1-init: DOCKER_PORTS = 8888
+tf1-init: 
+	@ :; 
+
+tf1-shell: ##@tf enter container with shell (bash)
+tf1-shell: tf1-init
+	@ bash -l
+
+
+runpy_v1 tf1-%: PYTHONPATH = $(abs_srcdir)
+
+DOCKER_TARGETS += runpy_v1
+runpy_v1: ##@jp Run ipython console starting by script defined in $NAME or $PYSCRIPTS
+runpy_v1: DOCKER_CONTAINER = tf1-stable
+runpy_v1: $(NAME) examples/AEFIT_dummy_v1.py te_db_1.npy | pip-install
+	@ ipython3 -i $< $(ARGS)
+
+#
+# IF pip does not work run:   python -m pip install --upgrade --force-reinstall pip
+#
+
 
 
 ##   .########..########.########..########..########..######.....###....########.########.########.

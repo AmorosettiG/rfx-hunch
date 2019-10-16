@@ -1,11 +1,14 @@
 {
     "python.linting.pylintEnabled": true,
     "python.autoComplete.extraPaths": [
-        "{${workspaceFolder}/build/src/Tprofile_read/dist-packages"
+        "${workspaceFolder}/build/src/Tprofile_read/dist-packages",
+        "${workspaceFolder}/build/src/Tprofile_read/tensorflow_src/tensorflow/python"
     ],
 
     // https://github.com/Microsoft/vscode-python/issues/2594
-    "python.jediEnabled": true,
+    "python.jediEnabled": false,
+    "python.pythonPath": "/sbin/python",
+    "python.linting.enabled": true,
 
     // try to set terminal in docker container for external vscode session
     // "terminal.integrated.shell.linux": "make -C ${workspaceFolder}/build/src/Tprofile_read/ tf-shell"

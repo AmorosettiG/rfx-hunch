@@ -85,10 +85,6 @@ class GAN3(GAN):
         ## INFERENCE ##
         self.inference_net = tf.keras.Sequential( [
             tf.keras.layers.Input(shape=(feature_dim)),
-            # tf.keras.layers.Reshape( target_shape=(2,int(feature_dim/2),1) ),
-            # tf.keras.layers.Conv2D(filters=32*scale, kernel_size=(2,3), strides=(1, 1), padding='SAME', activation=activation),
-            # tf.keras.layers.Dropout(dprate),            
-            # tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(feature_dim * 20 * scale, activation=activation),
             tf.keras.layers.Dropout(dprate),
             tf.keras.layers.Dense(feature_dim * 20 * scale, activation=activation),
@@ -107,10 +103,6 @@ class GAN3(GAN):
             tf.keras.layers.Dense(feature_dim * 10 * scale, activation=activation),
             tf.keras.layers.Dense(feature_dim * 20 * scale, activation=activation),
             tf.keras.layers.Dense(feature_dim * 20 * scale, activation=activation),
-            # tf.keras.layers.Reshape(target_shape=(2, int(feature_dim/2), int(20*scale) )),
-            # tf.keras.layers.Conv2DTranspose(filters=32*scale, kernel_size=(2,3), strides=(1, 1), padding="SAME", activation=activation),
-            # tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=(1,1), strides=(1, 1), padding="SAME"),
-            # tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(feature_dim),
         ] )
 

@@ -22,7 +22,7 @@ import models
 class THunchModel(tf.keras.Model):
     __metaclass__ = abc.ABCMeta
     def __init__(self, *args, **kwargs):
-        super(THunchModel, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.stop_training = False
 
 
@@ -95,7 +95,9 @@ class THunchModel(tf.keras.Model):
 class VAE(THunchModel):
     __metaclass__ = abc.ABCMeta
     def __init__(self, *args, **kwargs):
-        super(VAE, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
+        self.inference_net = None
+        self.generative_net = None
 
     @abc.abstractmethod
     def encode(self, x, training=False):
@@ -109,7 +111,7 @@ class VAE(THunchModel):
     def reparametrize(self, x, training=True):
         return NotImplemented    
 
-    def save(self, filename):
+    def save(self, filename):        
         self.inference_net.save_weights(filename+'_encoder.kcp')
         self.generative_net.save_weights(filename+'_decoder.kcp')
 
@@ -166,7 +168,7 @@ def tensorboard_log(name=None):
     import datetime
     if name is None: return []
     else           : name = name + '_'
-    log_base_dir = ipysh.abs_srcdir+"/jpnb/logs"
+    log_base_dir = ''#ipysh.abs_srcdir+"/jpnb/logs"
     log_dir  = log_base_dir+"/fit/" + name + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     batch_loss = tf.keras.callbacks.TensorBoard(log_dir=log_dir, update_freq='batch')    
     cpt_file = log_dir + '/models.ckpt'

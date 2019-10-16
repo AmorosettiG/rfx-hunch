@@ -1,6 +1,7 @@
 # note: it must be an ubuntu like image (see default)
 # ARG  DOCKER_IMAGE=tensorflow/tensorflow:nightly-devel-py3
-FROM tensorflow/tensorflow:1.13.1-py3
+FROM tensorflow/tensorflow:1.14.0-py3
+#1.13.1-py3
 
 RUN apt-get update;
 
@@ -47,8 +48,12 @@ RUN apt-get update; \
   # statmodels
   RUN pip3 install -U statsmodels
   
-  RUN apt install -y ipython3 ipython3-notebook
+  RUN apt install -y ipython3 
+  #ipython3-notebook
   
+  # needed for bokeh
+  RUN pip3 install -U jinja2 
+
   # make Jupyter able save to pdf
   # RUN apt install -y pandoc pandoc-citeproc pandoc-data texlive-xetex
 

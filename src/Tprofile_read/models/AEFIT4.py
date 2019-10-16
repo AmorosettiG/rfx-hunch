@@ -1,6 +1,4 @@
 
-
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -21,57 +19,10 @@ import matplotlib.colors as colors
 
 import ipysh
 import models
-# from models.base import VAE
-
-
-"""
-.##....##....###....##....##....########..########.##....##..######..########
-.###...##...##.##...###...##....##.....##.##.......###...##.##....##.##......
-.####..##..##...##..####..##....##.....##.##.......####..##.##.......##......
-.##.##.##.##.....##.##.##.##....##.....##.######...##.##.##..######..######..
-.##..####.#########.##..####....##.....##.##.......##..####.......##.##......
-.##...###.##.....##.##...###....##.....##.##.......##...###.##....##.##......
-.##....##.##.....##.##....##....########..########.##....##..######..########
-"""
+import models.layers
 
 
 
-class NaNDense(tf.keras.layers.Dense):
-    """Just your regular densely-connected NN layer.
-    """
-    def __init__(self,
-               units,
-               activation=None,
-            #    use_bias=True,
-            #    kernel_initializer='glorot_uniform',
-            #    bias_initializer='zeros',
-            #    kernel_regularizer=None,
-            #    bias_regularizer=None,
-            #    activity_regularizer=None,
-            #    kernel_constraint=None,
-            #    bias_constraint=None,
-               **kwargs):
-        super(NaNDense, self).__init__( units, activation, **kwargs)
-        
-    
-    def call(self, inputs):
-        inputs = tf.convert_to_tensor(inputs)
-        inputs = tf.where(tf.math.is_nan(inputs), tf.zeros_like(inputs), inputs)
-        outputs = tf.matmul(inputs, self.kernel)
-        if self.use_bias:
-            outputs = tf.nn.bias_add(outputs, self.bias)
-        if self.activation is not None:
-            return self.activation(outputs)  # pylint: disable=not-callable
-        return outputs
-
-
-
-
-
-
-class ResetCallback(tf.keras.callbacks.Callback):
-  def on_epoch_begin(self, batch, logs=None):
-    self.model.losses = []
 
 """
 .##.....##..#######..########..########.##......
@@ -85,35 +36,69 @@ class ResetCallback(tf.keras.callbacks.Callback):
 class AEFIT4(models.base.VAE):
     ''' General Autoencoder Fit Model for TF 2.0
     '''    
-    def __init__(self, feature_dim=40, latent_dim=2, dprate = 0., activation=tf.nn.relu, beta=1., 
-                 encoder_geometry=[20,20,10], decoder_geometry=None, scale=1, *args, **kwargs):
-                 super(AEFIT4, self).__init__(*args, **kwargs)
-                 self.latent_dim = latent_dim
-                 self.feature_dim = feature_dim
-                 self.encoder_geometry = encoder_geometry
-                 if decoder_geometry is None: decoder_geometry = encoder_geometry[::-1] # reverse order
-                 self.decoder_geometry = decoder_geometry
-                 self.dprate = dprate
-                 self.scale = scale
-                 self.activation = activation
-                 self.beta = beta        
-                 self.set_model(feature_dim, latent_dim, *args, **kwargs)
-                 print('AEFIT4 ready:')
-    
+    def __init__(self, feature_dim=40, latent_dim=2, dprate=0., activation=tf.nn.relu, beta=1., 
+                 geometry=[20,20,10], scale=1, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.latent_dim = latent_dim
+        self.feature_dim = feature_dim        
+        self.dprate = dprate
+        self.scale = scale
+        self.activation = activation
+        self.beta = tf.Variable(beta, dtype=tf.float32, name='beta', trainable=False)
+        self.apply_sigmoid = False
+        self.bypass = False
+        self.set_model(feature_dim, latent_dim, 
+                            dprate=dprate,
+                            scale=scale, 
+                            activation=activation,
+                            geometry=geometry)
 
-    def set_model(self, feature_dim, latent_dim, dprate=0., scale=1., activation='relu', *args, **kwargs):
+        self.output_names = self.generative_net.output_names
+        self.compile(
+            optimizer  = tf.keras.optimizers.Adam(learning_rate=1e-3),
+            loss       = self.compute_mse_loss,
+            # loss       = self.compute_cross_entropy_loss,
+            # logit_loss = True,
+            # metrics    = ['accuracy']
+        )
+        print('AEFIT4 ready:')
+
+ 
+    
+    def set_model(self, feature_dim, latent_dim, dprate=0., activation=tf.nn.relu, 
+                  geometry=[20,20,10], scale=1):
+
+        class LsInitializer(tf.keras.initializers.Initializer):
+            """Initializer for latent layer"""
+            def __init__(self, axis=1):
+                super(LsInitializer, self).__init__()
+                self.axis = axis
+
+            def __call__(self, shape, dtype=tf.dtypes.float32):
+                dtype = tf.dtypes.as_dtype(dtype)
+                if not dtype.is_numpy_compatible or dtype == tf.dtypes.string:
+                    raise ValueError("Expected numeric or boolean dtype, got %s." % dtype)
+                axis = self.axis
+                shape[axis] = int(shape[axis]/2)
+                identity = tf.initializers.identity()(shape)
+                return tf.concat([identity, tf.zeros(shape)], axis=axis)
+
         def add_dense_encode(self, fdim=feature_dim, ldim=latent_dim, geometry=[20,20,10,10]):
-            for i,size in enumerate(geometry):
-                self.add(tf.keras.layers.Dense(fdim*size*scale, name=self.name+'_decode_'+str(i), activation=activation))
-                self.add(tf.keras.layers.Dropout(dprate, name=self.name+'_dpout_'+str(i)))
-            self.add(tf.keras.layers.Dense(ldim))
+            for _,size in enumerate(geometry):
+                self.add(tf.keras.layers.Dense(fdim*size*scale, activation=activation))
+                self.add(tf.keras.layers.Dropout(dprate))
+            if len(geometry) == 0: initializer = LsInitializer()
+            else : initializer = None            
+            self.add(tf.keras.layers.Dense(ldim, activation='linear', use_bias=False, kernel_initializer=initializer))
             return self
 
         def add_dense_decode(self, fdim=feature_dim, ldim=latent_dim, geometry=[10,10,20,20]):            
-            for i,size in enumerate(geometry):
-                self.add(tf.keras.layers.Dense(fdim*size*scale, name=self.name+'_decode_'+str(i), activation=activation))
-                self.add(tf.keras.layers.Dropout(dprate, name=self.name+'_dpout_'+str(i)))
-            self.add(tf.keras.layers.Dense(fdim))
+            for _,size in enumerate(geometry):
+                self.add(tf.keras.layers.Dense(fdim*size*scale, activation=activation))
+                self.add(tf.keras.layers.Dropout(dprate))
+            if len(geometry) == 0: initializer = tf.initializers.identity()
+            else : initializer = None
+            self.add(tf.keras.layers.Dense(fdim, activation='linear', use_bias=False, kernel_initializer=initializer))            
             return self
         # add methods to Sequential class
         tf.keras.Sequential.add_dense_encode = add_dense_encode
@@ -122,30 +107,21 @@ class AEFIT4(models.base.VAE):
         ## INFERENCE ##
         inference_net = tf.keras.Sequential( [
             tf.keras.layers.Input(shape=(feature_dim,)),
-            NaNDense(feature_dim),
-        ], name=self.name+'_seq_inference_net' ).add_dense_encode(ldim=2*latent_dim, geometry=self.encoder_geometry)
+            # tf.keras.layers.Lambda(lambda x: tf.where(tf.math.is_nan(x),tf.zeros_like(x),x)), 
+            models.layers.NaNDense(feature_dim),
+            models.layers.Relevance1D(name=self.name+'_iRlv', activation='linear', kernel_initializer=tf.initializers.ones),
+        ]).add_dense_encode(ldim=2*latent_dim, geometry=geometry)
 
         ## GENERATION ##
         generative_net = tf.keras.Sequential( [
             tf.keras.layers.Input(shape=(latent_dim,)),
-            tf.keras.layers.Dense(latent_dim)
-        ], name=self.name+'_seq_generative_net' ).add_dense_decode(geometry=self.decoder_geometry)
-
-        inference_net.build()
-        generative_net.build()
+            models.layers.Relevance1D(name=self.name+'_gRlv', activation='linear', kernel_initializer=tf.initializers.ones),
+            #tf.keras.layers.Dense(latent_dim)
+        ]).add_dense_decode(geometry=geometry[::-1])
+        
         self.inference_net = inference_net
-        self.generative_net = generative_net
-
-        self._sce = 0.
-        self._mkl = 0.
-        self._akl = 0.        
-        # Compile the model
-        self.compile(  
-            optimizer= tf.keras.optimizers.Adam(learning_rate=1e-3),
-            loss     = self.compute_loss,
-            metrics  = ['accuracy', self.sce, self.akl, self.mkl]
-        )    
-
+        self.generative_net = generative_net        
+        return inference_net, generative_net
 
     @tf.function
     def reparametrize(self, z_mean, z_log_var):
@@ -153,94 +129,70 @@ class AEFIT4(models.base.VAE):
         dim = tf.shape(z_mean)[1]
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
-
-
+    
     @tf.function
     def encode(self, X, training=None):
         mean, logvar = tf.split(self.inference_net(X, training=training), num_or_size_splits=2, axis=1)
         return mean, logvar
 
     @tf.function
-    def decode(self, s, training=None, apply_sigmoid=False):
+    def decode(self, s, training=True, apply_sigmoid=None):
         x = self.generative_net(s, training=training)
-        if apply_sigmoid: x = tf.sigmoid(x)
+        if apply_sigmoid is None: apply_sigmoid = self.apply_sigmoid        
+        if apply_sigmoid is True and training is False:
+            x = tf.sigmoid(x)
         return x
 
-    def call(self, xy, training=None):
-        
-        @tf.function
-        def analytic_kld(mean, logvar, axis=1):
-            return -0.5 * tf.reduce_sum(1. + logvar - tf.square(mean) - tf.exp(logvar)  , axis=axis)
-         
-
-        @tf.function
-        def montecarlo_kld(z, mean, logvar, axis=1):
-            def vae_logN_pdf(sample, mean, logvar):
-                log2pi = tf.math.log(2. * np.pi)
-                return -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi)
-            logpz   =  vae_logN_pdf(z, 0., 1.)
-            logqz_x =  vae_logN_pdf(z, mean, logvar)
-            return    -tf.reduce_sum(logpz - logqz_x, axis=axis)
-
+    def call(self, xy, training=True):
         att = tf.math.is_nan(xy)
         xy  = tf.where(att, tf.zeros_like(xy), xy)
-        mean, logvar = self.encode(xy)
-        z   = self.reparametrize(mean, logvar)        
-        XY  = self.decode(z)
-        XY  = tf.where(att, tf.zeros_like(XY), XY)
-
-        # MONTECARLO KL LOSS #
-        mkl_loss = montecarlo_kld(z,mean,logvar)
-        
-        # ANALYTIC GAUSSIAN KL TERM #
-        akl_loss  = analytic_kld(mean,logvar)
-        akl_weight = tf.reduce_sum(tf.dtypes.cast( tf.math.is_nan(xy), dtype=tf.float32 ), axis=1)
-        akl_loss  += 0.5 * akl_weight
-        self.add_loss( lambda: self.beta * akl_loss )
-
-        # DEBUG
-        self._mkl =  tf.reduce_max(mkl_loss)
-        self._akl =  tf.reduce_max(akl_loss)
-
+        mean, logvar = self.encode(xy, training=training)
+        z = self.reparametrize(mean,logvar)
+        XY = self.decode(z, training=training)        
+        if training is not False:
+            XY  = tf.where(att, tf.zeros_like(XY), XY)
+        kl_loss = -0.5 * tf.reduce_sum(1. + logvar - tf.square(mean) - tf.exp(logvar), axis=1)
+        if self.bypass:
+            XY = 0.*XY + xy # add dummy gradients passing through the ops
+            kl_loss = 0.
+        self.add_loss(self.beta * kl_loss )
         return XY
 
-    def compute_loss(self, xy, XY):
-        xy = tf.where(tf.math.is_nan(xy), tf.zeros_like(xy), xy)
-        crossen =  tf.nn.sigmoid_cross_entropy_with_logits(logits=XY, labels=xy)
-        logpx_z =  tf.reduce_sum( crossen , axis=1)
-        return logpx_z
-
-
-    ## IF SEEMS TO FAIL TO FIND A GOOD CONVERGENCE
-    def train_step(self, xy, training=True):
+    def train_step(self, data, training=True):
+        xy = data[0]
         with tf.GradientTape() as tape:
             XY = self.call(xy, training=training)
-            loss = tf.reduce_mean(self.compute_loss(xy, XY) + tf.convert_to_tensor(self.losses))
+            loss = self.loss(xy, XY)# tf.reduce_mean( self.loss(xy, XY) + self.losses[0] )
+
         if training:
             gradients = tape.gradient(loss, self.trainable_variables)
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         return loss
 
+    def compile(self, optimizer=None, loss=None, logit_loss=False, metrics=None, **kwargs):
+        if optimizer is None: 
+            if self.optimizer: optimizer = self.optimizer
+            else             : optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3)
+        
+        if loss is None or (hasattr(self, 'loss') and loss == self.loss): loss_wrapper = self.loss
+        else: 
+            self.apply_sigmoid = logit_loss
+            loss_wrapper = lambda xy,XY: loss( tf.where(tf.math.is_nan(xy), tf.zeros_like(xy), xy), 
+                                               tf.where(tf.math.is_nan(xy), tf.zeros_like(XY), XY))
+        return super().compile(optimizer, loss=loss_wrapper, metrics=metrics, **kwargs)
+    
+    def compute_cross_entropy_loss(self, xy, XY):
+        crossen =  tf.nn.sigmoid_cross_entropy_with_logits(logits=XY, labels=xy)
+        logpx_z =  tf.reduce_mean( crossen , axis=1)
+        return logpx_z
+
+    def compute_mse_loss(self, xy, XY):
+        return tf.losses.mse(y_pred=XY, y_true=xy)
+
     def recover(self,x):
         xr = self.call(x, training=False)
         return tf.where(tf.math.is_nan(x),xr,x)
 
-    # KL divergence by montecarlo
-    def mkl(self, x, y):
-        return self._mkl
-
-    # analytical Kullback Libler
-    def akl(self, x, y):
-        return self._akl
-
-    # sigmoid cross entropy
-    def sce(self, x, y):
-        return self._sce
-
-    def plot_generative(self, z):
-        s = self.decode(tf.convert_to_tensor([z]),apply_sigmoid=True) 
-        x,y = tf.split(s,2,axis=1)
-        plt.plot(x[0],y[0])        
 
 
 
