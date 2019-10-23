@@ -5,7 +5,10 @@ export PYTHON_PACKAGES
 export PYTHONPATH
 export PYTHONUSERBASE
 
-PYTHON_PACKAGES = six numpy wheel mock # python packages needed for tf
+
+PYTHON_PACKAGES = six numpy wheel mock
+# tensorflow-model-optimization
+
 PYTHONPATH = $(abs_top_builddir)/conf/python/site-packages/lib/python3.6/site-packages/:/usr/local/lib/python3.6/dist-packages:/usr/lib/python3.6/site-packages/:$(abs_srcdir)
 
 ##    .########.########.##....##..######...#######..########..########.##........#######..##......##  
@@ -105,6 +108,25 @@ rdipietro: ##download rdpietro notebooks
 rdipietro_URL = https://github.com/rdipietro/jupyter-notebooks.git
 rdipietro_BRANCH = master
 rdipietro_DIR = $(srcdir)/jpnb/rdipietro
+
+
+
+# .########..########..########.##.....##.####.########....###.....######.
+# .##.....##.##.....##.##.......##.....##..##.....##......##.##...##....##
+# .##.....##.##.....##.##.......##.....##..##.....##.....##...##..##......
+# .########..########..######...##.....##..##.....##....##.....##..######.
+# .##.....##.##...##...##........##...##...##.....##....#########.......##
+# .##.....##.##....##..##.........##.##....##.....##....##.....##.##....##
+# .########..##.....##.########....###....####....##....##.....##..######.
+
+$(abs_top_builddir)/ext/brevitas:
+	$(MAKE) -C $(@D) $(@F)
+
+## BREVITAS install ##
+DOCKER_TARGETS += brevitas_install
+brevitas_install: DOCKER_CONTAINER = tf-build
+brevitas_install: $(abs_top_builddir)/ext/brevitas
+	$(PIP) install --user -e $<
 
 
 

@@ -19,148 +19,7 @@ import matplotlib.colors as colors
 
 import ipysh
 import models
-# from models.base import VAE
-
-
-"""
-.##....##....###....##....##....########..########.##....##..######..########
-.###...##...##.##...###...##....##.....##.##.......###...##.##....##.##......
-.####..##..##...##..####..##....##.....##.##.......####..##.##.......##......
-.##.##.##.##.....##.##.##.##....##.....##.######...##.##.##..######..######..
-.##..####.#########.##..####....##.....##.##.......##..####.......##.##......
-.##...###.##.....##.##...###....##.....##.##.......##...###.##....##.##......
-.##....##.##.....##.##....##....########..########.##....##..######..########
-"""
-
-class NaNDense(tf.keras.layers.Dense):
-    """Just your regular densely-connected NN layer.
-    """
-    def __init__(self,
-               units,
-               activation=None,
-               use_bias=True,
-               **kwargs):
-        super(NaNDense, self).__init__( units, activation, **kwargs)
-        
-    
-    def call(self, inputs):
-        inputs = tf.convert_to_tensor(inputs)
-        inputs = tf.where(tf.math.is_nan(inputs), tf.zeros_like(inputs), inputs)
-        outputs = tf.matmul(inputs, self.kernel)
-        if self.use_bias: 
-            outputs = tf.nn.bias_add(outputs, self.bias)
-        if self.activation is not None:
-            return self.activation(outputs)  # pylint: disable=not-callable
-        return outputs
-
-
-
-class Reparametrize1D(tf.keras.layers.Layer):
-    """ VAE REPARAMETRIZATION LAYER
-    """
-    def __init__(self, **kwargs):
-        super(Reparametrize1D, self).__init__(**kwargs)
-    
-    @tf.function
-    def reparametrize(self, z_mean, z_log_var):
-        batch = tf.shape(z_mean)[0]
-        dim   = tf.shape(z_mean)[1]
-        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
-
-    @tf.function
-    def call(self, inputs, training=True):
-        inputs = tf.convert_to_tensor(inputs)
-        mean, logvar = tf.split(inputs, num_or_size_splits=2, axis=1)
-        akl_loss = -0.5 * tf.reduce_sum(1. + logvar - tf.square(mean) - tf.exp(logvar), axis=1)
-        mean = self.reparametrize(mean,logvar)
-        self.add_loss( akl_loss, inputs=True )
-        return mean
-        
-    
-
-class RelUnitNorm(tf.keras.constraints.Constraint):
-    """Constrains the weights incident to each hidden unit to have unit norm.
-    """
-    def __init__(self, axis=0):
-        self.axis = axis
-
-    def __call__(self, w):
-        # w =  w / ( tf.keras.backend.epsilon() + 
-        #      tf.sqrt( tf.reduce_sum(tf.square(w), axis=self.axis, keepdims=True)))
-        w =  w / ( tf.keras.backend.epsilon() + 
-             tf.sqrt( tf.reduce_max(tf.square(w), axis=self.axis, keepdims=True)))
-        return w
-
-    def get_config(self):
-        return {'axis': self.axis}
-
-
-class Relevance1D(tf.keras.layers.Dropout):
-    def __init__(self,
-                activation=None,
-                kernel_initializer='glorot_uniform',
-                kernel_regularizer=None,
-                kernel_constraint=RelUnitNorm(),
-                **kwargs):
-        if 'input_shape' not in kwargs and 'input_dim' in kwargs:
-            kwargs['input_shape'] = (kwargs.pop('input_dim'),)
-        super(Relevance1D, self).__init__( 0., **kwargs )
-        self.activation = tf.keras.activations.get(activation)
-        self.kernel_initializer = tf.keras.initializers.get(kernel_initializer)
-        self.kernel_constraint = tf.keras.constraints.get(kernel_constraint)        
-        self.kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-
-        self.supports_masking = True
-        self.input_spec = tf.keras.layers.InputSpec(min_ndim=1)
-
-    def build(self, input_shape):
-        dtype = tf.dtypes.as_dtype(self.dtype or tf.keras.backend.floatx)
-        if not (dtype.is_floating or dtype.is_complex):
-            raise TypeError('Unable to build `Dense` layer with non-floating point '
-                            'dtype %s' % (dtype,))
-        input_shape = tf.TensorShape(input_shape)
-        if tf.compat.dimension_value(input_shape[-1]) is None:
-            raise ValueError('The last dimension of the inputs to `Dense` '
-                            'should be defined. Found `None`.')
-        last_dim = tf.compat.dimension_value(input_shape[-1])
-        self.input_spec = tf.keras.layers.InputSpec(min_ndim=1, axes={-1: last_dim})
-        self.kernel = self.add_weight(
-            'kernel',
-            shape=[last_dim],
-            initializer=self.kernel_initializer,
-            regularizer=self.kernel_regularizer,            
-            constraint=self.kernel_constraint,
-            dtype=self.dtype,
-            trainable=True)
-            
-        self.built = True
-
-
-    def call(self, inputs):
-        inputs  = tf.convert_to_tensor(inputs)
-        # inputs = tf.where(tf.math.is_nan(inputs), tf.zeros_like(inputs), inputs)
-        outputs = tf.multiply( inputs , self.kernel )
-        # if self.activation is not None:
-        #     return self.activation(outputs)  # pylint: disable=not-callable
-        outputs = super(Relevance1D, self).call(outputs)
-        return outputs
-
-    def compute_output_shape(self, input_shape):
-        input_shape = tf.TensorShape(input_shape)
-        if tf.compat.dimension_value(input_shape[-1]) is None:
-            raise ValueError( 'The innermost dimension of input_shape must be defined, but saw: %s' % input_shape)
-        return input_shape
-
-    def get_config(self):
-        # config = {
-        #     'activation': tf.keras.activations.serialize(self.activation),
-        #     'kernel_initializer': tf.keras.initializers.serialize(self.kernel_initializer),
-        #     'kernel_constraint': tf.keras.constraints.serialize(self.kernel_constraint),
-        # }
-        base_config = super(tf.keras.layers.Dropout, self).get_config()
-        # return dict(list(base_config.items()) + list(config.items()))
-        return dict(list(base_config.items()))
+import models.layers
 
 
 
@@ -188,6 +47,7 @@ class AEFIT5(models.base.VAE):
         self.beta = tf.Variable(beta, dtype=tf.float32, name='beta', trainable=False)
         self.apply_sigmoid = False
         self.bypass = False
+        self.akl = True
         self.set_model(feature_dim, latent_dim, 
                             dprate=dprate,
                             scale=scale, 
@@ -195,16 +55,24 @@ class AEFIT5(models.base.VAE):
                             geometry=geometry)
 
         self.output_names = self.generative_net.output_names
+        
+        self.akl_loss = 0.
+        self.mkl_loss = 0.
+        def akl(x,y): return self.akl_loss
+        def mkl(x,y): return self.mkl_loss 
+        def b(x,y): return self.beta
+        def mse(x,y): return tf.reduce_mean(self.loss(x,y))
         self.compile(
-            optimizer  = tf.keras.optimizers.Adam(learning_rate=1e-3),
+            #optimizer  = tf.keras.optimizers.SGD(learning_rate=1e-3),
+            #optimizer  = tf.keras.optimizers.Adagrad(learning_rate=1e-3),
+            optimizer  = tf.keras.optimizers.Adam(learning_rate=1e-3),            
             loss       = self.compute_mse_loss,
             # loss       = self.compute_cross_entropy_loss,
             # logit_loss = True,
-            # metrics    = ['accuracy']
+            metrics    = [mse,akl,mkl,b]
         )
         print('AEFIT5 ready:')
 
- 
     
     def set_model(self, feature_dim, latent_dim, dprate=0., activation=tf.nn.relu, 
                   geometry=[20,20,10], scale=1):
@@ -249,34 +117,30 @@ class AEFIT5(models.base.VAE):
         inference_net = tf.keras.Sequential( [
             tf.keras.layers.Input(shape=(feature_dim,)),
             tf.keras.layers.Lambda(lambda x: tf.where(tf.math.is_nan(x),tf.zeros_like(x),x)), 
-            # # NaNDense(feature_dim),
-            Relevance1D(name=self.name+'_iRlv', activation='linear', kernel_initializer=tf.initializers.ones),
+            #models.layers.NaNDense(feature_dim),
+            models.layers.Relevance1D(name=self.name+'_iRlv', activation='linear', kernel_initializer=tf.initializers.ones),
         ]).add_dense_encode(ldim=2*latent_dim, geometry=geometry)
 
         ## GENERATION ##
         generative_net = tf.keras.Sequential( [
             tf.keras.layers.Input(shape=(latent_dim,)),
-            Relevance1D(name=self.name+'_gRlv', activation='linear', kernel_initializer=tf.initializers.ones),
-            #tf.keras.layers.Dense(latent_dim)
+            models.layers.Relevance1D(name=self.name+'_gRlv', activation='linear', kernel_initializer=tf.initializers.ones),
         ]).add_dense_decode(geometry=geometry[::-1])
         
         self.inference_net = inference_net
         self.generative_net = generative_net        
         return inference_net, generative_net
 
-    @tf.function
     def reparametrize(self, z_mean, z_log_var):
         batch = tf.shape(z_mean)[0]
         dim = tf.shape(z_mean)[1]
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
-    
-    @tf.function
+        
     def encode(self, X, training=None):
         mean, logvar = tf.split(self.inference_net(X, training=training), num_or_size_splits=2, axis=1)
         return mean, logvar
 
-    @tf.function
     def decode(self, s, training=True, apply_sigmoid=None):
         x = self.generative_net(s, training=training)
         if apply_sigmoid is None: apply_sigmoid = self.apply_sigmoid        
@@ -285,25 +149,37 @@ class AEFIT5(models.base.VAE):
         return x
 
     def call(self, xy, training=True):
+        def vae_logN_pdf(sample, mean, logvar):
+            log2pi = tf.math.log(2. * np.pi)
+            return -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi)
+
         att = tf.math.is_nan(xy)
         xy  = tf.where(att, tf.zeros_like(xy), xy)
         mean, logvar = self.encode(xy, training=training)
         z = self.reparametrize(mean,logvar)
-        XY = self.decode(z, training=training)        
+        XY = self.decode(z, training=training)
+        akl_loss = -0.5 * tf.reduce_sum(1. + logvar - tf.square(mean) - tf.exp(logvar), axis=1)
+        mkl_loss = tf.reduce_sum(vae_logN_pdf(z, mean, logvar) - vae_logN_pdf(z, 0., 1.), axis=1)
         if training is not False:
             XY  = tf.where(att, tf.zeros_like(XY), XY)
-        kl_loss = -0.5 * tf.reduce_sum(1. + logvar - tf.square(mean) - tf.exp(logvar), axis=1)
         if self.bypass:
             XY = 0.*XY + xy # add dummy gradients passing through the ops
-            kl_loss = 0.
-        self.add_loss(self.beta * kl_loss )
+            akl_loss = 0.
+            mkl_loss = 0.
+        
+        self.akl_loss = akl_loss
+        self.mkl_loss = mkl_loss
+        if self.akl is True:
+            self.add_loss(self.beta * tf.reduce_mean(akl_loss) )
+        else:
+            self.add_loss(self.beta * tf.reduce_mean(mkl_loss) )
         return XY
 
     def train_step(self, data, training=True):
         xy = data[0]
         with tf.GradientTape() as tape:
             XY = self.call(xy, training=training)
-            loss = self.loss(xy, XY)# tf.reduce_mean( self.loss(xy, XY) + self.losses[0] )
+            loss = self.loss(xy, XY) # tf.reduce_mean( self.loss(xy, XY) + self.losses[0] )
 
         if training:
             gradients = tape.gradient(loss, self.trainable_variables)
@@ -329,7 +205,7 @@ class AEFIT5(models.base.VAE):
         return logpx_z
 
     def compute_mse_loss(self, xy, XY):
-        return tf.losses.mse(y_pred=XY, y_true=xy)
+        return tf.keras.losses.mse(y_pred=XY, y_true=xy)
 
     def recover(self,x):
         xr = self.call(x, training=False)

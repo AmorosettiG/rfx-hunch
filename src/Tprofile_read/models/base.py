@@ -175,6 +175,88 @@ def tensorboard_log(name=None):
     check_pt = tf.keras.callbacks.ModelCheckpoint(filepath=cpt_file, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')    
     return [ batch_loss, check_pt ]
 
+
+class RecordMetrics(tf.keras.callbacks.Callback):
+    def __init__(self):
+        self.metrics = { 
+            'loss':[],
+            }
+
+    # def on_train_begin(self, logs=None):
+    #     for m in self.metrics:
+    #         self.metrics[m].clear()
+    #     return super().on_train_begin(logs=logs)
+
+
+    def on_train_batch_end(self, batch, logs=None):        
+        self.metrics['loss'].append( tf.reduce_mean(logs.get('loss')) )
+        for m in self.model.metrics:
+            self.metrics[m.name].append(m.result().numpy())            
+        return super().on_train_batch_end(batch, logs=logs)
+        
+    def set_model(self, model):
+        self.model = model
+        for m in model.metrics:
+            self.metrics.update( {m.name:[]} )
+
+
+class BetaAnnealing(tf.keras.callbacks.Callback):
+    def __init__(self, size=100, scale=0.1):
+        self.metrics = { 
+            'loss':[],
+            }
+        self.g = []
+        self.m = []
+        self.size = size
+        self.scale = scale
+
+    # def on_train_begin(self, logs=None):
+    #     for m in self.metrics:
+    #         self.metrics[m].clear()
+    #     return super().on_train_begin(logs=logs)
+
+    def on_train_batch_end(self, batch, logs=None):                
+        def gker(x, mu, sig):
+            return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+        def append(label, x):
+            arr = self.metrics[label]
+            if len(arr) < self.size:
+                arr.append(x)
+            else:
+                arr = np.roll(arr, -1)
+                arr[-1] = x
+                self.metrics[label] = arr
+        append('loss', tf.reduce_mean(logs.get('loss')).numpy() )
+        for m in self.model.metrics:
+            append(m.name, m.result().numpy())
+        g = 0.
+        arr = self.metrics['loss']
+        if len(arr) >= self.size:
+            x = np.linspace(0,1,100)
+            g = np.mean( np.gradient(self.metrics['loss']) * gker(x,.5,.3) )
+            m = np.mean( self.metrics['loss'] * gker(x,.5,.5) )
+            #self.model.beta.assign( g )
+            self.g.append(np.abs(g) * self.scale)
+            self.m.append(m * self.scale )        
+        self.model.beta.assign( np.mean(self.metrics['loss']) * self.scale )
+        return super().on_train_batch_end(batch, logs=logs)
+
+    def on_epoch_begin(self, epoch, logs=None):
+        return super().on_epoch_begin(epoch, logs=logs)
+
+    # def on_epoch_end(self, epoch, logs=None):
+    #     self.metrics['loss'].clear()
+    #     return super().on_epoch_end(epoch, logs=logs)
+
+    def set_model(self, model):
+        self.model = model
+        for m in model.metrics:
+            self.metrics.update( {m.name:[]} )
+
+
+
+
+
 class ResetCallback(tf.keras.callbacks.Callback):
     def on_epoch_begin(self, epoch, logs=None):
         self.model.reset_states

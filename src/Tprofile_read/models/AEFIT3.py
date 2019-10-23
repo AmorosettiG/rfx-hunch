@@ -215,7 +215,8 @@ class AEFIT3(models.base.VAE):
         
         self.add_loss(self.beta * akl_loss)
         return XY
-                
+        
+        
     def recover(self,x):
         xr = self.call(x)
         return tf.where(tf.math.is_nan(x),xr,x)

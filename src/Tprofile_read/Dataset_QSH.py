@@ -204,13 +204,13 @@ class Dataset_QSH(models.base.Dataset):
         try:
             self._dataset = np.load( file )            
         except:
-            print("error loading np database")
+            raise IOError('unable to open file')
 
     def save(self, file):
         try:            
             np.save(file, self._dataset)
         except:
-            print("error saving np database")
+            raise IOError('unable to open file')
 
     def clean_array(self, a):
         if np.isnan(self._null) or np.isinf(self._null):

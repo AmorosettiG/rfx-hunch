@@ -277,3 +277,11 @@ ext-cppop-example-test: ext-cppop-example
 	  LD_LIBRARY_PATH=$$(pwd) python3 inner_product_tests.py
 
 
+
+
+
+
+DOWNLOADS += brevitas
+brevitas_URL = https://github.com/Xilinx/brevitas.git
+brevitas_BRANCH = master
+

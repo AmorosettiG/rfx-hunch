@@ -1,6 +1,7 @@
 # note: it must be an ubuntu like image (see default)
 # ARG  DOCKER_IMAGE=tensorflow/tensorflow:nightly-devel-py3
 FROM tensorflow/tensorflow:2.0.0-py3
+# FROM tensorflow/tensorflow:devel-py3
 
 RUN apt-get update;
 
@@ -56,3 +57,4 @@ RUN apt install -y jupyter ipython
 COPY treeSetSource /usr/bin/treeSetSource
 RUN  chmod 555 /usr/bin/treeSetSource
 
+# Rembember fix for vcode: ln -s tensorflow_core tensorflow
