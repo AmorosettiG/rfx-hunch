@@ -40,6 +40,14 @@ tf-init: pip-install | tensorflow_src
 # RUN_PREQUEL = treeSetSource A inProgress;
 
 PYTHON_PACKAGES += bokeh bokeh-metaplot sklearn
+
+# SPARSIFIER
+# tensorflow-model-optimization
+
+# BREVITAS
+# click  onnx  
+
+
 DOCKER_TARGETS += pip-install
 pip-install: DOCKER_CONTAINER = tf-build
 

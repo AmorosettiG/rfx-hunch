@@ -1,6 +1,6 @@
 
 # Model for testing the KL loss in custom layer (embed sthocastic reparametrization in single layer)
-
+# this should provide a model that can be compiled in a single net.
 
 from __future__ import absolute_import
 from __future__ import division

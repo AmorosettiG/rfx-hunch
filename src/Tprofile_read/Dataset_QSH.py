@@ -56,18 +56,18 @@ class QSH(Htls.Struct):
 
     def _get_item_byname(self, key, dim=None):
         key = key.split(':')
-        if len(key) > 1: 
+        if len(key) > 1:
             dim = int(key[1])
         key = key[0]
         fields = key.split('~')
-        if len(fields) > 1: 
+        if len(fields) > 1:
             val = np.concatenate([ np.atleast_1d(self._get_item_byname(k, dim)) for k in fields ], axis=-1)
         else:
             try: val = self._data[key]
-            except: 
+            except:
                 try: val = getattr(self, key)
-                except: val = np.nan 
-            if dim is not None: val = val[0:dim]            
+                except: val = np.nan
+            if dim is not None: val = val[0:dim]
         return val
         
     @property
@@ -146,13 +146,12 @@ class Dataset_QSH(models.base.Dataset):
         elif isinstance(key, slice):
             return self._dataset[key]
         elif isinstance(key, str):
-            return QSH(self._dataset[:])[key]
+            return self._dataset[key]
+            # return [ QSH(p)[key] for p in self._dataset ]
         elif isinstance(key, tuple):
             return [ self[k] for k in key ]
         else:
             print("not supported index: ",type(key))
-
-
 
     # set by reference
     def __setitem__(self, key, value):
@@ -165,7 +164,8 @@ class Dataset_QSH(models.base.Dataset):
         else:
             print("not supported index: ",type(key))
 
-
+    def get_tuple(self, key):
+        return np.array([ QSH(p)[key] for p in self._dataset ])
 
     # return a copy
     @property
@@ -395,6 +395,23 @@ class Dataset_QSH(models.base.Dataset):
         return tf.data.Dataset.from_generator(gen, types, shape)
         
 
+    def get_torch_dataset(self, tag='prel~te:15', ltag='tcentro', **parameters):
+        from torch.utils import data
+        class DataSet():
+            def __init__(self, qsh):
+                self.qsh = qsh
+                self.tag = tag
+                self.ltag = ltag
+            def __len__(self):
+                return len(self.qsh)
+            def __getitem__(self, index):
+                q = self.qsh[index]
+                qx = q[self.tag ]
+                ql = q[self.ltag]
+                return (qx,ql)
+        return data.DataLoader( DataSet(self), **parameters )
+
+
     ## REWRITE WITHOUT TF
     def plot_hisotgrams(self):
         import seaborn as sns
@@ -409,9 +426,12 @@ class Dataset_QSH(models.base.Dataset):
         plt.bar(x,Y)
         
         yh = [ len(y[np.isfinite(y)]) for y in self['te'] ]
-        plt.figure('not nan len distribution')
+        fig = plt.figure('not nan len distribution')
         plt.clf()
+        fig.set_dpi(150)
+        ax = plt.gca()        
         sns.distplot(yh)
+        ax.set_title('not nan len distribution')
         yh_max = np.max(yh)
         print("this should be shriked to: ",yh_max)
 

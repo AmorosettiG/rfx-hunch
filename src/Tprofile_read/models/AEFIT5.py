@@ -22,8 +22,6 @@ import models
 import models.layers
 
 
-
-
 """
 .##.....##..#######..########..########.##......
 .###...###.##.....##.##.....##.##.......##......
@@ -170,9 +168,13 @@ class AEFIT5(models.base.VAE):
         self.akl_loss = akl_loss
         self.mkl_loss = mkl_loss
         if self.akl is True:
-            self.add_loss(self.beta * tf.reduce_mean(akl_loss) )
+            kl_loss = self.beta * tf.reduce_mean(akl_loss)
         else:
-            self.add_loss(self.beta * tf.reduce_mean(mkl_loss) )
+            kl_loss = self.beta * tf.reduce_mean(mkl_loss)
+        if training is True:
+            self.add_loss(kl_loss)
+        # else:
+        #     self.add_loss(0.)
         return XY
 
     def train_step(self, data, training=True):
