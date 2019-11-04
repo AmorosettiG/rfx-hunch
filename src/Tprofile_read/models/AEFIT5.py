@@ -69,7 +69,7 @@ class AEFIT5(models.base.VAE):
             # logit_loss = True,
             metrics    = [mse,akl,mkl,b]
         )
-        print('AEFIT5 ready:')
+        print('AEFIT5 ready m:')
 
     
     def set_model(self, feature_dim, latent_dim, dprate=0., activation=tf.nn.relu, 
@@ -126,8 +126,8 @@ class AEFIT5(models.base.VAE):
         ]).add_dense_decode(geometry=geometry[::-1])
         
         self.inference_net = inference_net
-        self.generative_net = generative_net        
-        return inference_net, generative_net
+        self.generative_net = generative_net
+        return inference_net, generative_net    
 
     def reparametrize(self, z_mean, z_log_var):
         batch = tf.shape(z_mean)[0]

@@ -9,6 +9,7 @@ import abc
 
 import models.base
 
+
 class Compose(models.base.VAE):
 
     def __init__(self, *args, **kwargs):
@@ -39,10 +40,10 @@ class Compose(models.base.VAE):
                 return m.outputs
         def get_generative_inputs(m):
             if hasattr(m, 'generative_net'): return m.generative_net.inputs
-            else                          : return m.inputs
+            else                           : return m.inputs
         def get_generative_outputs(m):
             if hasattr(m, 'generative_net'): return m.generative_net.outputs
-            else                          : return m.outputs
+            else                           : return m.outputs
         def get_inference_inputshape(m):
             if hasattr(m, 'inference_net'): return m.inference_net.input_shape
             else                          : return m.input_shape
@@ -111,9 +112,22 @@ class Compose(models.base.VAE):
             if self.optimizer: optimizer = self.optimizer
             else             : optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3)
         if loss is not None: 
+            loss_wrapper = lambda xy,XY: loss( tf.where(tf.math.is_nan(xy), tf.zeros_like(xy), xy), 
+                                               tf.where(tf.math.is_nan(xy), tf.zeros_like(XY), XY))
             print('WARNING: you are tryig to set a loss where losses should come directly from compose models')
-        else: loss = [ m.loss for m in self._mkids ]
-        return self.super.compile(optimizer, loss=loss, metrics=metrics, **kwargs)
+        else: 
+            if hasattr(self, 'loss_scale'):
+                loss = []
+                for i,w in enumerate(self.loss_scale ):
+                    print('appending: W=%d for out %d %s'%(w,i,self._mkids[i].name))
+                    l = lambda x,y: w * self._mkids[i].loss(x,y)
+                    loss.append( l )
+            else: loss = [ m.loss for m in self._mkids ]
+            loss_wrapper = [ lambda xy,XY: loss( tf.where(tf.math.is_nan(xy), tf.zeros_like(xy), xy), 
+                                             tf.where(tf.math.is_nan(xy), tf.zeros_like(XY), XY))
+                             for loss in loss ]
+
+        return self.super.compile(optimizer, loss=loss_wrapper, metrics=metrics, **kwargs)
 
 
 
