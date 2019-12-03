@@ -294,16 +294,19 @@ start() {
 	if [ -z "${_ans}" ]; then
 		if test -n "${DOCKER_SHARES}"; then
 		 for _share in ${DOCKER_SHARES}; do
+		  log "add share $_share"
 		  DOCKER_SHARES_VAR="-v ${_share} ${DOCKER_SHARES_VAR}";
 		 done
 		fi
     if test -n "${DOCKER_NETWORKS}"; then
 		 for _n in ${DOCKER_NETWORKS}; do
+		  log "set network $_n"
 		  DOCKER_NETWORKS_VAR="--network=$_n ${DOCKER_NETWORKS_VAR}";
 		 done
 		fi
     if test -n "${DOCKER_PORTS}"; then
 		 for _n in ${DOCKER_PORTS}; do
+		  log "set port $_n"
 		  DOCKER_PORTS_VAR="-p $_n ${DOCKER_PORTS_VAR}";
 		 done
 		fi
@@ -317,8 +320,12 @@ start() {
 		  DOCKER_MOUNTS_VAR="--mount dst=$_dst,volume-driver=local,volume-opt=o=bind,volume-opt=device=$_src ${DOCKER_MOUNTS_VAR}";
 		 done
 		fi
-	  log "Starting docker container from image ${1:-${DOCKER_IMAGE}}"
-  	docker run -d ${INT} --entrypoint=${DOCKER_ENTRYPOINT} \
+	if test -n "${DOCKER_ENTRYPOINT}"; then
+	  log "entrypoint ${DOCKER_ENTRYPOINT}"
+	  DOCKER_ENTRYPOINT_VAR="--entrypoint=${DOCKER_ENTRYPOINT}"
+	fi
+	log "Starting docker container from image ${1:-${DOCKER_IMAGE}}"
+  	docker run -d ${INT} ${DOCKER_ENTRYPOINT_VAR} \
   						 -e USER=${USER} \
   						 -e DISPLAY=${DISPLAY} \
   						 -e LANG=${LANG} \
@@ -334,8 +341,8 @@ start() {
   						 ${DOCKER_SHARES_VAR} \
   						 ${DOCKER_MOUNTS_VAR} \
   						 ${DOCKER_NETWORKS_VAR} \
-							 ${DOCKER_PORTS_VAR} \
-							 ${DOCKER_PROFILE_VAR} \
+						 ${DOCKER_PORTS_VAR} \
+						 ${DOCKER_PROFILE_VAR} \
   						 -w $(pwd) \
   						 --name ${DOCKER_CONTAINER} \
   						 ${1:-${DOCKER_IMAGE}};
