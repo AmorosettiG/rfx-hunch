@@ -6,6 +6,14 @@ export PYTHONPATH
 export PYTHONUSERBASE
 
 
+
+
+
+
+
+
+
+
 PYTHON_PACKAGES = six numpy wheel mock
 # tensorflow-model-optimization
 
@@ -32,7 +40,7 @@ tf-init: ##@tf build process
 tf-init: DOCKER_IMAGE = tf-devel-py3
 tf-init: DOCKER_URL = $(srcdir)/docker
 tf-init: DOCKER_MOUNTS = dist-packages:/usr/local/lib/python3.6/dist-packages
-tf-init: DOCKER_PORTS = 8888:8888 6006:6006
+tf-init: DOCKER_PORTS = 8888:8888 6006:6006 3000:3000
 tf-init: pip-install | tensorflow_src
 	@ :; 
 
@@ -229,5 +237,28 @@ runpy_v1: $(NAME) examples/AEFIT_dummy_v1.py te_db_1.npy | pip-install
 # 	  add-apt-repository -u "deb http://www.mdsplus.org/dist/Ubuntu16/repo MDSplus alpha"; \
 # 	  mkdir -p /usr/lib/python3.6/site-packages/; \
 # 	  apt install -y mdsplus-alpha mdsplus-alpha-python;
+
+
+
+# DOCKER_TARGETS += code-server-%
+# CODE_SERVER_PORT = 8080
+
+# code-server-init: DOCKER_PORTS = $(CODE_SERVER_PORT):$(CODE_SERVER_PORT)
+# code-server-init: DOCKER_IMAGE = codercom/code-server:latest
+# code-server-init: DOCKER_CONTAINER = code-server
+# code-server-init:
+# 	:;
+
+# code-server-start: ##@@ide start vs code server via docker container
+# code-server-start: code-server-init
+# code-server-start: DOCKER_CONTAINER = code-server
+# code-server-start: 
+# 	dumb-init -- code-server --host 0.0.0.0 --port $(CODE_SERVER_PORT) --auth none $(top_srcdir)
+
+# code-server-stop: ##@@ide stop vs code server via docker container
+# code-server-stop: DOCKER_CONTAINER = code-server
+# code-server-stop: docker-clean
+
+
 
 

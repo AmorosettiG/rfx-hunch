@@ -92,7 +92,7 @@ class Relevance1D(tf.keras.layers.Dropout):
         self.kernel_initializer = tf.keras.initializers.get(kernel_initializer)
         self.kernel_constraint = tf.keras.constraints.get(kernel_constraint)        
         self.kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
-
+        self.bypass = False
         self.supports_masking = True
         self.input_spec = tf.keras.layers.InputSpec(min_ndim=1)
 
@@ -118,11 +118,12 @@ class Relevance1D(tf.keras.layers.Dropout):
             
         self.built = True
 
-
     def call(self, inputs):
         inputs  = tf.convert_to_tensor(inputs)
         # inputs = tf.where(tf.math.is_nan(inputs), tf.zeros_like(inputs), inputs)
-        outputs = tf.multiply( inputs , self.kernel )
+        # outputs = tf.cond(self.bypass is True, lambda: tf.multiply( inputs , self.kernel), lambda: inputs )
+        if self.bypass is True: outputs = inputs
+        else: outputs = tf.multiply( inputs , self.kernel )
         # if self.activation is not None:
         #     return self.activation(outputs)  # pylint: disable=not-callable
         outputs = super(Relevance1D, self).call(outputs)
@@ -133,6 +134,9 @@ class Relevance1D(tf.keras.layers.Dropout):
         if tf.compat.dimension_value(input_shape[-1]) is None:
             raise ValueError( 'The innermost dimension of input_shape must be defined, but saw: %s' % input_shape)
         return input_shape
+
+    def set_bypass(self, value=True):
+        self.bypass = value
 
     def get_config(self):
         # config = {

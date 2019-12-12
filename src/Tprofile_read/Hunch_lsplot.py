@@ -72,6 +72,7 @@ class LSPlotBokeh(LSPlot):
     from bokeh.layouts import column, row
     from bokeh.plotting import figure
     from bokeh.document import without_document_lock
+    import re
 
     from bokeh.models import (
         LinearColorMapper,
@@ -93,32 +94,41 @@ class LSPlotBokeh(LSPlot):
 
     
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, plot_size=600, font_size='12pt', *args, **kwargs):
         super(LSPlotBokeh,self).__init__(*args,**kwargs)
         self._target = None
         self._doc = None
 
-        self._figure_ls = LSPlotBokeh.figure(plot_width=800, plot_height=800,tools="save,pan,box_zoom,zoom_in,zoom_out,reset,crosshair")
-        self._figure_gn = LSPlotBokeh.figure(plot_width=800, plot_height=800,tools="save,pan,zoom_in,zoom_out,reset",x_range=(0,1),y_range=(0,1))
+        sx,sy = plot_size, plot_size
+        self._figure_ls = LSPlotBokeh.figure(plot_width=sx, plot_height=sy,tools="save,pan,box_zoom,zoom_in,zoom_out,reset,crosshair")
+        self._figure_gn = LSPlotBokeh.figure(plot_width=sx, plot_height=sy,tools="save,pan,zoom_in,zoom_out,reset",x_range=(0,1),y_range=(0,1))
         self._figure_Sabs = LSPlotBokeh.figure(plot_width=400, plot_height=200,tools="",x_range=(0,1),y_range=(0,1))
         self._figure_Sarg = LSPlotBokeh.figure(plot_width=400, plot_height=200,tools="",x_range=(0,1),y_range=(0,1))
-        self._figure_ls.xaxis.major_label_text_font_size = "20pt"
-        self._figure_ls.yaxis.major_label_text_font_size = "20pt"
-        self._figure_gn.xaxis.major_label_text_font_size = "20pt"
-        self._figure_gn.yaxis.major_label_text_font_size = "20pt"
+        self._figure_ls.xaxis.major_label_text_font_size = font_size
+        self._figure_ls.yaxis.major_label_text_font_size = font_size
+        self._figure_gn.xaxis.major_label_text_font_size = font_size
+        self._figure_gn.yaxis.major_label_text_font_size = font_size
 
         # self._div = LSPlotBokeh.Div(width=800, height=10, height_policy="fixed")        
 
         # trace mouse position
         self._inx = LSPlotBokeh.TextInput(value='', width=150)
-        self._pos = LSPlotBokeh.ColumnDataSource(data=dict(x=[0],y=[0],dim=[0]))        
+        self._pos = LSPlotBokeh.ColumnDataSource(data=dict(x=[0],y=[0],dim=[0]))
         def posx_cb(attr, old, new):
             pos = self._pos
+            fixed_pts = LSPlotBokeh.re.findall('(\([0-9.,-]+\))',new) # find all fixed point like "(x,y)"
+            new       = LSPlotBokeh.re.sub('(\([0-9.,-]+\))','',new)  # remove fixed points from string
             x,y = [float(x.strip()) for x in new.split(',')]
             pos.data['x'][0] = x
             pos.data['y'][0] = y
+            if len(fixed_pts) > 0:
+                ref = fixed_pts[0]
+                ref = LSPlotBokeh.re.sub('[\(\)]','',ref)
+                rx,ry = [float(x.strip()) for x in ref.split(',')]
+                self._doc.add_next_tick_callback(lambda: self.plot_lsgen_point(rx,ry))
+                self._doc.add_next_tick_callback(lambda: self.plot_generative(rx,ry, target_data=self._data_gn_ref))
             self._doc.add_next_tick_callback(lambda: self.plot_generative(x,y))
-            self._doc.add_next_tick_callback(lambda: self.plot_lsgen_point(x,y))            
+            
         self._inx.on_change('value',posx_cb)
         
         # COLOR MAPPERS
@@ -127,7 +137,6 @@ class LSPlotBokeh(LSPlot):
         self._mapper3 = LSPlotBokeh.LinearColorMapper(palette=LSPlotBokeh.RdBu[9], low=0, high=1)
         self._mapper3 = LSPlotBokeh.LinearColorMapper(palette=LSPlotBokeh.RdBu[9], low=0, high=1)
         self._mapper4 = LSPlotBokeh.LinearColorMapper(palette=LSPlotBokeh.Category20[20], low=0, high=20)
-
 
         # LS PLOT
         self._ls_glyphs = []
@@ -138,7 +147,7 @@ class LSPlotBokeh(LSPlot):
         self._data_ls = LSPlotBokeh.ColumnDataSource(data=dict(selected_pt=[],mx=[],my=[],vx=[],vy=[],zx=[],zy=[],tcentro=[],tbordo=[],
                                                                label=[],Ip=[],dsxm=[],dens=[],F=[],TH=[],NS=[]
                                                                ) )
-        self._figure_ls.scatter('zx','zy',name='sample', legend='sample', size=10, source=self._data_ls, color='grey', alpha=0.2, line_width=0)        
+        self._figure_ls.scatter('zx','zy',name='sample', legend_label='sample', size=10, source=self._data_ls, color='grey', alpha=0.2, line_width=0)        
         # self._data_ls_selected_pt = LSPlotBokeh.ColumnDataSource( data=dict(x=[],y=[]) )        
         # def add_cross():            
         #     self._figure_ls.ray(x='x', y='y', source=self._data_ls_selected_pt, length=0, angle=0, line_width=2)
@@ -147,7 +156,7 @@ class LSPlotBokeh(LSPlot):
 
         def add_sl_glyph(name, field=None, mapper=self._mapper3):
             if field is None: field = name
-            self._ls_glyphs += [self._figure_ls.circle('mx','my',name=name, legend=name,
+            self._ls_glyphs += [self._figure_ls.circle('mx','my',name=name, legend_label=name,
                                                             size=10, 
                                                             source=self._data_ls, 
                                                             alpha=0.5, 
@@ -171,8 +180,11 @@ class LSPlotBokeh(LSPlot):
 
         # NG PLOT        
         self._data_gn = LSPlotBokeh.ColumnDataSource(data=dict(x=[],y=[]))
+        self._data_gn_ref = LSPlotBokeh.ColumnDataSource(data=dict(x=[],y=[]))
         self._figure_gn.line('x','y', source=self._data_gn, color='black', line_width=3, line_dash=[10, 10])
         self._figure_gn.scatter('x','y', source=self._data_gn, size=10, color='blue' )
+        self._figure_gn.line('x','y', source=self._data_gn_ref, color='black', line_width=3, line_dash=[10, 10])
+        
 
         # WIDGETS #
         self._b1 = LSPlotBokeh.Button(label="Update ls", button_type="success", width=150)
@@ -330,13 +342,16 @@ class LSPlotBokeh(LSPlot):
             self._data_ls.data = data
         
 
-    def plot_generative(self, x, y, lasso_list=None):
+    def plot_generative(self, x, y, target_data=None, lasso_list=None):
         md = self._model
         XY = md.decode(tf.convert_to_tensor([[x,y]]), training=False)
         if isinstance(XY, list): XY = XY[0]   # if list of outputs take first one
-        X,Y = tf.split(XY[0], 2)
+        X,Y = tf.split(XY[0], 2)        
         data = dict( x=X.numpy(), y=Y.numpy() )
-        self._data_gn.data = data
+        if target_data is None:
+            self._data_gn.data = data
+        else:
+            target_data.data = data
 
     def plot_lsgen_point(self, x,y):
         try: 
@@ -353,26 +368,26 @@ class LSPlotBokeh(LSPlot):
         pass
 
 
-    def display_event(self, attributes=[], style = 'float:left;clear:left;font_size=10pt'):
+    def display_event(self, attributes=[]):
         "Build a suitable CustomJS to display the current event in the div model."
-        return LSPlotBokeh.CustomJS(args=dict(inx=self._inx), code="""
+        
+        return LSPlotBokeh.CustomJS(args=dict(inx=self._inx, intap=[]), code="""
             var attrs = %s; var args = [];
             for (var i = 0; i<attrs.length; i++)
                 args.push(attrs[i] + '=' + Number(cb_obj[attrs[i]]).toFixed(2));
-            var line = ""
             var x = cb_obj[attrs[0]]
             var y = cb_obj[attrs[1]]
-            if (cb_obj.event_name == "tap")
-                inx.value = Number(x).toFixed(3) + "," + Number(y).toFixed(3);
-            // line += "<span style=%r><b>" + cb_obj.event_name + "</b>(" + Number(x).toFixed(3) + ","
-            //                                                               + Number(y).toFixed(3) + 
-            //                                                               ")</span>\\n";
-            // var text = div.text.concat(line);
-            // var lines = text.split("\\n")
-            // if (lines.length > 15)
-            //     lines.shift();
-            // div.text = lines.join("\\n");
-        """ % (attributes, style))
+            
+            inx.value = Number(x).toFixed(3) + "," + Number(y).toFixed(3);
+            if (cb_obj.event_name == "tap") {
+                window.intap = "(" + Number(x).toFixed(3) + "," + Number(y).toFixed(3) + ")"
+                console.log(window.intap);
+            }
+            if (typeof window.intap !== 'undefined') {
+                inx.value +=  window.intap;
+            }
+            
+            """ % (attributes))
 
 
 

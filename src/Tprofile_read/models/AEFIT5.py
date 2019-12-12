@@ -69,7 +69,7 @@ class AEFIT5(models.base.VAE):
             # logit_loss = True,
             metrics    = [mse,akl,mkl,b]
         )
-        print('AEFIT5 ready m:')
+        print('AEFIT5 ready:')
 
     
     def set_model(self, feature_dim, latent_dim, dprate=0., activation=tf.nn.relu, 
@@ -111,23 +111,33 @@ class AEFIT5(models.base.VAE):
         tf.keras.Sequential.add_dense_encode = add_dense_encode
         tf.keras.Sequential.add_dense_decode = add_dense_decode
         
+        self.inference_rlv  = models.layers.Relevance1D(name=self.name+'_iRlv', activation='linear', kernel_initializer=tf.initializers.ones)
+        self.generative_rlv = models.layers.Relevance1D(name=self.name+'_gRlv', activation='linear', kernel_initializer=tf.initializers.ones)
+
         ## INFERENCE ##
         inference_net = tf.keras.Sequential( [
             tf.keras.layers.Input(shape=(feature_dim,)),
             tf.keras.layers.Lambda(lambda x: tf.where(tf.math.is_nan(x),tf.zeros_like(x),x)), 
-            #models.layers.NaNDense(feature_dim),
-            models.layers.Relevance1D(name=self.name+'_iRlv', activation='linear', kernel_initializer=tf.initializers.ones),
+            # models.layers.NaNDense(feature_dim),
+            # models.layers.Relevance1D(name=self.name+'_iRlv', activation='linear', kernel_initializer=tf.initializers.ones),
+            self.inference_rlv,
         ]).add_dense_encode(ldim=2*latent_dim, geometry=geometry)
 
         ## GENERATION ##
         generative_net = tf.keras.Sequential( [
             tf.keras.layers.Input(shape=(latent_dim,)),
-            models.layers.Relevance1D(name=self.name+'_gRlv', activation='linear', kernel_initializer=tf.initializers.ones),
+            # models.layers.Relevance1D(name=self.name+'_gRlv', activation='linear', kernel_initializer=tf.initializers.ones),
+            self.generative_rlv,
         ]).add_dense_decode(geometry=geometry[::-1])
         
         self.inference_net = inference_net
         self.generative_net = generative_net
+
         return inference_net, generative_net    
+
+    def set_rlv_bypass(self,value = True):
+        self.inference_rlv.set_bypass(value)
+        self.generative_rlv.set_bypass(value)
 
     def reparametrize(self, z_mean, z_log_var):
         batch = tf.shape(z_mean)[0]

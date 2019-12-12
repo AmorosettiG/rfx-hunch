@@ -58,3 +58,6 @@ COPY treeSetSource /usr/bin/treeSetSource
 RUN  chmod 555 /usr/bin/treeSetSource
 
 # Rembember fix for vcode: ln -s tensorflow_core tensorflow
+
+
+RUN pip3 install -U jupyter_tensorboard
