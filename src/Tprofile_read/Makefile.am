@@ -39,7 +39,7 @@ tf-%: DOCKER_CONTAINER = tf-build
 tf-init: ##@tf build process
 tf-init: DOCKER_IMAGE = tf-devel-py3
 tf-init: DOCKER_URL = $(srcdir)/docker
-tf-init: DOCKER_MOUNTS = dist-packages:/usr/local/lib/python3.6/dist-packages
+tf-init: DOCKER_MOUNTS = dist-packages:/usr/local/lib/python3.6/dist-packages /run/user:/run/user
 tf-init: DOCKER_PORTS = 8888:8888 6006:6006 3000:3000
 tf-init: pip-install | tensorflow_src
 	@ :; 
@@ -119,6 +119,10 @@ jupyter-lab: ##@jp start jupyter server on jpnb $(srcdir) folder
 	@ $(RUN_PREQUEL) jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --notebook-dir=$(abs_srcdir)/jpnb
 
 
+jupyter-theme: ##@jp setup theme
+	jt -t onedork -cellw 95\% -T
+
+
 DOWNLOADS += rdipietro
 rdipietro: ##download rdpietro notebooks
 rdipietro_URL = https://github.com/rdipietro/jupyter-notebooks.git
@@ -127,24 +131,41 @@ rdipietro_DIR = $(srcdir)/jpnb/rdipietro
 
 
 
-# .########..########..########.##.....##.####.########....###.....######.
-# .##.....##.##.....##.##.......##.....##..##.....##......##.##...##....##
-# .##.....##.##.....##.##.......##.....##..##.....##.....##...##..##......
-# .########..########..######...##.....##..##.....##....##.....##..######.
-# .##.....##.##...##...##........##...##...##.....##....#########.......##
-# .##.....##.##....##..##.........##.##....##.....##....##.....##.##....##
-# .########..##.....##.########....###....####....##....##.....##..######.
 
-$(abs_top_builddir)/ext/brevitas:
-	$(MAKE) -C $(@D) $(@F)
+# TORCH_LIB_PATH = 	$(abs_top_builddir)/ext/pytorch/build/lib \
+# 					$(abs_top_builddir)/ext/pytorch/build/lib.linux-x86_64-3.7
 
-## BREVITAS install ##
-DOCKER_TARGETS += brevitas_install
-brevitas_install: DOCKER_CONTAINER = tf-build
-brevitas_install: $(abs_top_builddir)/ext/brevitas
-	$(PIP) install --user -e $<
+# TORCH_PY_PATH = $(abs_top_builddir)/ext/pytorch/build/lib.linux-x86_64-3.7 \
+# 				$(abs_top_builddir)/ext/pytorch
+
+# ONNX_LIB_PATH = $(TORCH_LIB_PATH)
+# ONNX_PY_PATH = 	$(abs_top_builddir)/ext/onnx/build/lib.linux-x86_64-3.7 \
+# 				$(abs_top_builddir)/ext/onnx \
+# 				$(TORCH_PY_PATH)
 
 
+# FINN_WS = $(abs_top_builddir)/ext/FINN
+# FINN_LIB_PATH =  $(ONNX_LIB_PATH)
+# FINN_PY_PATH = 	\
+# 					$(FINN_WS)/src \
+# 					$(FINN_WS)/brevitas_cnv_lfc/training_scripts \
+# 					$(FINN_WS)/brevitas \
+# 					$(FINN_WS)/pyverilator \
+# 					$(FINN_WS)/notebooks \
+# 					$(ONNX_PY_PATH)
+					
+
+# FINN_INST_NAME = finn_test
+# DIRECTORIES = /tmp/$(FINN_INST_NAME)
+
+# export PYTHONDONTWRITEBYTECODE = 1
+# export FINN_INST_NAME := $(FINN_INST_NAME)
+# export FINN_WS := $(FINN_WS)
+# export VIVADO_PATH := $(or $(VIVADO_PATH),/mnt/data0/Xilinx/Vivado/2019.1/)
+# export PYNQSHELL_PATH := $(FINN_WS)/PYNQ-HelloWorld/boards
+# export FINN_ROOT := $(FINN_WS)
+# export LD_LIBRARY_PATH := $(call ak__join_with,:,$(FINN_LIB_PATH))$(if ${LD_LIBRARY_PATH},:${LD_LIBRARY_PATH})
+# export PYTHONPATH := $(call ak__join_with,:,$(FINN_PY_PATH))$(if ${PYTHONPATH},:${PYTHONPATH})
 
 
 

@@ -167,8 +167,6 @@ docker-rpm-builder-install: | docker-rpm-builder
 
 
 
-
-
 ##    .########.########.##....##..######...#######..########..########.##........#######..##......##  
 ##    ....##....##.......###...##.##....##.##.....##.##.....##.##.......##.......##.....##.##..##..##  
 ##    ....##....##.......####..##.##.......##.....##.##.....##.##.......##.......##.....##.##..##..##  
@@ -186,7 +184,7 @@ tensorflow_BRANCH = master
 
 DOCKER_TARGETS = tf-%
 tf-init: ##@tf build process
-tf-init: DOCKER_IMAGE = tensorflow/tensorflow:devel-py3
+tf-init: DOCKER_IMAGE = tf-devel-py3
 tf-init: DOCKER_CONTAINER = tf-build
 tf-init: DOCKER_MOUNTS = dist-packages:/usr/local/lib/python3.6/dist-packages
 tf-init: PYTHON_PACKAGES = pip six numpy wheel mock # python packages needed for tf
@@ -281,7 +279,150 @@ ext-cppop-example-test: ext-cppop-example
 
 
 
+
+
+
+
+
+
+
+DOWNLOADS += pytorch
+pytorch: ##@finn download pytorch sources
+pytorch_URL = https://github.com/pytorch/pytorch.git
+pytorch_BRANCH = master
+
+
+build-pytorch: export CMAKE_PREFIX_PATH=$(PYTHON_USERBASE)
+build-pytorch: export DEBUG=1
+build-pytorch:
+	cd pytorch; \
+	git submodule sync; \
+	git submodule update --init --recursive; \
+	python setup.py build;
+
+
+
+TORCH_LIB_PATH = 	$(abs_builddir)/pytorch/build/lib \
+					$(abs_builddir)/pytorch/build/lib.linux-x86_64-3.7
+
+TORCH_PY_PATH = $(abs_builddir)/pytorch/build/lib.linux-x86_64-3.7 \
+				$(abs_builddir)/pytorch
+
+run-pytorch: export LD_LIBRARY_PATH := $(call ak__join_with,:,$(TORCH_LIB_PATH))$(if ${LD_LIBRARY_PATH},:${LD_LIBRARY_PATH})
+run-pytorch: export PYTHONPATH := $(call ak__join_with,:,$(TORCH_PY_PATH))$(if ${PYTHONPATH},:${PYTHONPATH})
+run-pytorch:
+	echo $${LD_LIBRARY_PATH}; \
+	cd pytorch; \
+	ipython
+
+
+DOWNLOADS += onnx
+onnx: ##@finn download onnx sources
+onnx_URL = https://github.com/onnx/onnx.git
+onnx_BRANCH = master
+
+
+
+
+build-onnx: export CMAKE_PREFIX_PATH=$(PYTHON_USERBASE)
+build-onnx: DEBUG=1
+build-onnx: ##@finn build onnx
+	cd onnx; \
+	git submodule sync; \
+	git submodule update --init --recursive; \
+	python setup.py build;
+
+
+ONNX_LIB_PATH = $(TORCH_LIB_PATH)
+ONNX_PY_PATH = 	$(abs_builddir)/onnx/build/lib.linux-x86_64-3.7 \
+				$(abs_builddir)/onnx \
+				$(TORCH_PY_PATH)
+
+run-onnx: export LD_LIBRARY_PATH := $(call ak__join_with,:,$(ONNX_LIB_PATH))$(if ${LD_LIBRARY_PATH},:${LD_LIBRARY_PATH})
+run-onnx: export PYTHONPATH := $(call ak__join_with,:,$(ONNX_PY_PATH))$(if ${PYTHONPATH},:${PYTHONPATH})
+run-onnx: ##@finn run ipython onnx
+	cd onnx;\
+	ipython
+
+
 DOWNLOADS += brevitas
+brevitas: ##@finn download brevitas
 brevitas_URL = https://github.com/Xilinx/brevitas.git
 brevitas_BRANCH = master
+
+
+
+DOWNLOADS += finn
+finn: ##@finn dowload package
+finn_URL = https://github.com/Xilinx/finn.git
+finn_BRANCH = dev
+finn_DIR = FINN
+
+FINN_INST_NAME := $(or $(FINN_INST_NAME),finn_test)
+FINN_WS = $(abs_builddir)/FINN
+
+HUNCH_PYTHONPATH = $(abs_top_srcdir)/src/Tprofile_read/
+
+FINN_LIB_PATH =  $(ONNX_LIB_PATH)
+FINN_PY_PATH = 	\
+					$(FINN_WS)/src \
+					$(FINN_WS)/brevitas_cnv_lfc/training_scripts \
+					$(FINN_WS)/brevitas \
+					$(FINN_WS)/pyverilator \
+					$(FINN_WS)/notebooks \
+					$(ONNX_PY_PATH) \
+					$(HUNCH_PYTHONPATH)
+					
+
+
+# HUNCH_PYTHONPATH = $(abs_top_builddir)/conf/python/site-packages/lib/python3.6/site-packages/ \
+#  					/usr/local/lib/python3.6/dist-packages:/usr/lib/python3.6/site-packages/ \
+# 					$(abs_srcdir)
+
+
+
+DIRECTORIES = /tmp/$(FINN_INST_NAME)
+
+
+finn-%: export PYTHONDONTWRITEBYTECODE = 1
+finn-%: export FINN_INST_NAME := $(FINN_INST_NAME)
+finn-%: export FINN_WS := $(FINN_WS)
+finn-%: export VIVADO_PATH := $(or $(VIVADO_PATH),/mnt/data0/Xilinx/Vivado/2019.1/)
+finn-%: export PYNQSHELL_PATH := $(FINN_WS)/PYNQ-HelloWorld/boards
+finn-%: export FINN_ROOT := $(FINN_WS)
+finn-%: export JUPYTER_PORT := 8889
+finn-%: export LD_LIBRARY_PATH := $(call ak__join_with,:,$(FINN_LIB_PATH))$(if ${LD_LIBRARY_PATH},:${LD_LIBRARY_PATH})
+finn-%: export PYTHONPATH := $(call ak__join_with,:,$(FINN_PY_PATH))$(if ${PYTHONPATH},:${PYTHONPATH})
+finn-shell: ##@finn shell with exports
+finn-shell: /tmp/$(FINN_INST_NAME)
+	cd FINN; source $${VIVADO_PATH}/settings64.sh; \
+	$(SHELL);
+
+finn-test: ##@finn run tests in FINN
+	cd FINN; source $${VIVADO_PATH}/settings64.sh; \
+	python setup.py test
+
+finn-run: ##@finn run $MODULE
+	$(info running $(MODULE)) \
+	cd FINN; source $${VIVADO_PATH}/settings64.sh; \
+	ipython -i $(MODULE);
+
+
+finn-jupyter: ##@finn start jupyter
+	$(info running $(MODULE)) \
+	cd FINN; source $${VIVADO_PATH}/settings64.sh; \
+	jupyter notebook --ip=0.0.0.0 --port $(JUPYTER_PORT) notebooks
+
+
+DOWNLOADS += PYNQ
+
+PYNQ: ##@pynq download pynq libraries
+PYNQ_URL = https://github.com/Xilinx/pynq.git
+PYNQ_BRANCH = master
+
+
+
+
+
+
 

@@ -13,7 +13,7 @@
         },
 
         {
-            "name": "Python: Remote Attach",
+            "name": "Python: Remote 3000",
             "type": "python",
             "request": "attach",
             "port": 3000,
@@ -22,6 +22,20 @@
                 {
                     "localRoot": "${workspaceFolder}",
                     "remoteRoot": "${workspaceFolder}"
+                }
+            ]
+        },
+        {
+            "name": "Python: Remote 8081",
+            "type": "python",
+            "request": "attach",
+            "port": 8081,
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot":  "${workspaceFolder}/build/ext/finn/",
+                    "remoteRoot": "/workspace/finn/"
+                    // "remoteRoot": "${workspaceFolder}"
                 }
             ]
         },
@@ -39,6 +53,13 @@
             "request": "launch",
             "program": "${file}",
             "console": "externalTerminal"
+        },
+        {            
+            "name": "Python: TESTS",
+            "type": "python",
+            "request": "launch",
+            "module": "setup.py",
+            "args": [ "test" ],
         }
     ]
 }

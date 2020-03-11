@@ -162,18 +162,37 @@ class Dataset():
 
 
 
+# embeddings = tf.Variable(latent_data, name='embeddings')
+# CHECKPOINT_FILE = TENSORBOARD_DIR + '/model.ckpt'
+# ckpt = tf.train.Checkpoint(embeddings=embeddings)
+# ckpt.save(CHECKPOINT_FILE)
 
+# config = projector.ProjectorConfig()
+# embedding = config.embeddings.add()
+# embedding.tensor_name = embeddings.name
+# embedding.metadata_path = TENSORBOARD_METADATA_FILE
 
-def tensorboard_log(name=None):
+# writer = tf.summary.create_file_writer(TENSORBOARD_DIR)
+# projector.visualize_embeddings(writer, config)
+
+def create_logdir(name=None):
     import datetime
-    if name is None: return []
+    import os
+    if name is None: name = "fit_"
     else           : name = name + '_'
-    log_base_dir = ''#ipysh.abs_srcdir+"/jpnb/logs"
-    log_dir  = log_base_dir+"/fit/" + name + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    batch_loss = tf.keras.callbacks.TensorBoard(log_dir=log_dir, update_freq='batch')    
+
+    # LOG DIRECTORY
+    log_base_dir = os.getcwd() # ipysh.abs_srcdir+"/jpnb/logs"
+    log_dir  = log_base_dir+"/logs/" + name + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    print("LOG: ",log_dir)
+    return log_dir
+
+def tensorboard_cb(log_dir):    
+    train = tf.keras.callbacks.TensorBoard(log_dir=log_dir, update_freq='epoch')    
     cpt_file = log_dir + '/models.ckpt'
     check_pt = tf.keras.callbacks.ModelCheckpoint(filepath=cpt_file, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')    
-    return [ batch_loss, check_pt ]
+    
+    return [ train, check_pt ]
 
 
 class RecordMetrics(tf.keras.callbacks.Callback):

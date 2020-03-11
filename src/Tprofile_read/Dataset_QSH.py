@@ -333,7 +333,17 @@ class Dataset_QSH(models.base.Dataset):
         self.set_null(_null)
 
 
-
+    def find(self, pulse=None, start=None):
+        if pulse is None:
+            raise LookupError
+        pulses = [ p for p in self if p['pulse'] == pulse ]
+        if len(pulses) == 0:
+            raise LookupError
+        if start is None:
+            return pulses
+        else:
+            q = [ p for p in pulses if p['start'] == start ]
+            return q[0]
 
     ## WORKING ON ....
     # def set_stats(self, fields=['prel','te','rho']):
@@ -346,9 +356,6 @@ class Dataset_QSH(models.base.Dataset):
     #             self.set_null(np.nan)
     #         stats[n] = scipy.stats.describe(self[n], nan_policy='omit')
     #         self.set_null(_null)
-
-
-
 
 
     def missing_values_mask(self, datasets=None):
@@ -395,8 +402,8 @@ class Dataset_QSH(models.base.Dataset):
         return tf.data.Dataset.from_generator(gen, types, shape)
         
 
-    def get_torch_dataset(self, tag='prel~te:15', ltag='tcentro', **parameters):
-        from torch.utils import data
+    def get_torch_dataset(self, tag='prel~te:15', ltag='tcentro'): #, **parameters):
+        #from torch.utils import data
         class DataSet():
             def __init__(self, qsh):
                 self.qsh = qsh
@@ -409,7 +416,8 @@ class Dataset_QSH(models.base.Dataset):
                 qx = q[self.tag ]
                 ql = q[self.ltag]
                 return (qx,ql)
-        return data.DataLoader( DataSet(self), **parameters )
+        #return data.DataLoader( DataSet(self), **parameters )
+        return DataSet(self)
 
 
     ## REWRITE WITHOUT TF
@@ -434,6 +442,9 @@ class Dataset_QSH(models.base.Dataset):
         ax.set_title('not nan len distribution')
         yh_max = np.max(yh)
         print("this should be shriked to: ",yh_max)
+
+
+
 
     def tf_tuple_compose(self, fields=[]):
         def clip(x):

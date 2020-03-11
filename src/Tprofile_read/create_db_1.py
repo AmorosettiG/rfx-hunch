@@ -6,6 +6,63 @@ from Hunch_utils import *
 
 
 
+# (fieldname, datatype, shape)
+sample_dtype = np.dtype( [ ('label','S10'),
+						('pulse', np.int32),
+						('start', np.int32),
+						('i_qsh', np.int32 ), 
+						('tbordo','>f4' ),
+						('tcentro','>f4' ),
+						('pos','>f4' ),
+						('grad','>f4' ),
+						('n_ok', np.int32 ),
+						('prel','>f4', (20,) ),
+						('rho','>f4', (20,) ),
+						('te','>f4', (20,) ),
+						
+						('Ip','>f4' ),
+						('dens', '>f4'),
+						('Te_dsxm', '>f4'),
+						('F',   '>f4'),
+						('TH',  '>f4'),
+						('POW', '>f4'),
+						('VT',  '>f4'),
+						('VP',  '>f4'),
+
+						('B0',  '>f4'),
+						('B07', '>f4'),
+						('B08', '>f4'),
+						('B06', '>f4'),
+						('B1',  '>f4'),
+						('B17', '>f4'),
+						('B18', '>f4'),
+						('B19', '>f4'),
+						('NS',  '>f4'),
+
+
+						# SHEq map
+						('mapro','>f4', (51,51) ),
+						('xxg','>f4', (51,) ),
+						('yyg','>f4', (51,) ),
+
+						# Spectrum
+						('n', '>i4', (10,) ),
+						('absBt_rm', '>f4', (10,)),
+						('argBt_rm', '>f4', (10,)),
+						('absBr_rm', '>f4', (10,)),
+						('argBr_rm', '>f4', (10,)),
+						('absFlux_rs', '>f4', (10,)),
+						('argFlux_rs', '>f4', (10,)),
+						('absBr_rs', '>f4', (10,)),
+						('argBr_rs', '>f4', (10,)),
+						('absBr_rp', '>f4', (10,)),
+						('argBr_rp', '>f4', (10,)),
+						('absBr_max', '>f4', (10,)),
+						('absFlux_max', '>f4', (10,)),
+					] )
+
+
+
 
 def read_spectrum(shot, connection=None, server='rat2:52368', t0=10, t1=20, dt=5, mode_n=range(7,17), mode_m=1, correction=3):
 	import MDSplus as mds
@@ -87,8 +144,6 @@ def read_spectrum(shot, connection=None, server='rat2:52368', t0=10, t1=20, dt=5
 
 
 
-
-
 def read_te_prof( shot, data_dir='/scratch/gobbin/rigoni/', add_spectrum=False ) :
 	file = 'dsx3_%d.sav' % shot
 	try:
@@ -108,7 +163,7 @@ def read_te_prof( shot, data_dir='/scratch/gobbin/rigoni/', add_spectrum=False )
 	
 	dim_pulse = x.t[0]
 	def find_pos(t): 
-		return np.argmin(dim_pulse - t)
+		return np.argmin(np.abs(dim_pulse - t))
 	
 	qshs = []
 	for i_qsh in range( n_qsh ) :
@@ -119,60 +174,6 @@ def read_te_prof( shot, data_dir='/scratch/gobbin/rigoni/', add_spectrum=False )
 	# print qshs[0].dtype.names
 	# per la label faccio shot_tttt 
 
-	# (fieldname, datatype, shape)
-	sample_dtype = np.dtype( [ ('label','S10'),
-							('pulse', np.int32),
-							('start', np.int32),
-							('i_qsh', np.int32 ), 
-							('tbordo','>f4' ),
-							('tcentro','>f4' ),
-							('pos','>f4' ),
-							('grad','>f4' ),
-							('n_ok', np.int32 ),
-							('prel','>f4', (20,) ),
-							('rho','>f4', (20,) ),
-							('te','>f4', (20,) ),
-							
-							('Ip','>f4' ),
-							('dens', '>f4'),
-							('Te_dsxm', '>f4'),
-							('F',   '>f4'),
-							('TH',  '>f4'),
-							('POW', '>f4'),
-							('VT',  '>f4'),
-							('VP',  '>f4'),
-
-							('B0',  '>f4'),
-							('B07', '>f4'),
-							('B08', '>f4'),
-							('B06', '>f4'),
-							('B1',  '>f4'),
-							('B17', '>f4'),
-							('B18', '>f4'),
-							('B19', '>f4'),
-							('NS',  '>f4'),
-
-
-							# SHEq map
-							('mapro','>f4', (51,51) ),
-							('xxg','>f4', (51,) ),
-							('yyg','>f4', (51,) ),
-
-							# Spectrum
-							('n', '>i4', (10,) ),
-							('absBt_rm', '>f4', (10,)),
-							('argBt_rm', '>f4', (10,)),
-							('absBr_rm', '>f4', (10,)),
-							('argBr_rm', '>f4', (10,)),
-							('absFlux_rs', '>f4', (10,)),
-							('argFlux_rs', '>f4', (10,)),
-							('absBr_rs', '>f4', (10,)),
-							('argBr_rs', '>f4', (10,)),
-							('absBr_rp', '>f4', (10,)),
-							('argBr_rp', '>f4', (10,)),
-							('absBr_max', '>f4', (10,)),
-							('absFlux_max', '>f4', (10,)),
-						] )
 
 	n_times_tot = 0
 	for qsh in qshs :
@@ -297,10 +298,13 @@ def create_db(add_spectrum=False):
 
 	q_all_data = np.concatenate( q_list )
 
-	np.save( 'te_db_1', q_all_data, allow_pickle=False )
+	np.save( 'te_db_1_fix', q_all_data, allow_pickle=False )
 	print ('Saved %d profiles from %d shots.' % ( q_all_data.shape[0], n_shots ))
 
 
 # if __name__ == '__main__':
 # 	create_db()
+
+
+
 

@@ -61,3 +61,5 @@ RUN  chmod 555 /usr/bin/treeSetSource
 
 
 RUN pip3 install -U jupyter_tensorboard
+
+RUN apt install -y cmake

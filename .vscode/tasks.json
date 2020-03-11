@@ -23,6 +23,14 @@
             "problemMatcher": [
                 "$eslint-compact"
             ]
+        },
+        {
+            "label": "finn_dev",
+            "command": "docker exec -ti finn_dev bash",
+            "type": "shell",
+            "problemMatcher": [
+                "$eslint-compact"
+            ]
         }
     ]
 }
