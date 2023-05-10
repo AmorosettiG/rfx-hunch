@@ -43,6 +43,7 @@ class AEFIT5(models.base.VAE):
         self.scale = scale
         self.activation = activation
         self.beta = tf.Variable(beta, dtype=tf.float32, name='beta', trainable=False)
+        self.gamma = 1.
         self.apply_sigmoid = False
         self.bypass = False
         self.akl = True
@@ -143,7 +144,7 @@ class AEFIT5(models.base.VAE):
         batch = tf.shape(z_mean)[0]
         dim = tf.shape(z_mean)[1]
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+        return z_mean + tf.exp(0.5 * z_log_var) * epsilon * self.gamma
         
     def encode(self, X, training=None):
         mean, logvar = tf.split(self.inference_net(X, training=training), num_or_size_splits=2, axis=1)

@@ -45,13 +45,44 @@ class ComposableAccess(Htls.Struct):
 
 class Dummy_g1data(models.base.Dataset):
 
-    kinds = [
-        {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },        
-        {'mean': [0.8], 'sigma': [0.1], 'gain': [0.5] },
-        {'mean': [0.2], 'sigma': [0.1], 'gain': [0.5] },
-        {'mean': [0.5], 'sigma': [0.2], 'gain': [1] },
-        {'mean': [0.5], 'sigma': [0.2], 'gain': [0.5] },
+
+#        ____                               _                 
+#   / ___|   __ _   _   _   ___   ___  (_)   __ _   _ __  
+#  | |  _   / _` | | | | | / __| / __| | |  / _` | | '_ \ 
+#  | |_| | | (_| | | |_| | \__ \ \__ \ | | | (_| | | | | |
+#   \____|  \__,_|  \__,_| |___/ |___/ |_|  \__,_| |_| |_|
+                                                        
+
+
+    # kinds = [
+    #     {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },   # this is sum of 2 gaussion with fixed parameters   
+    #     {'mean': [0.8], 'sigma': [0.1], 'gain': [0.5] },           # 1 gaussian with fixed parameters
+    #     {'mean': [0.2], 'sigma': [0.1], 'gain': [0.5] },
+    #     {'mean': [0.5], 'sigma': [0.2], 'gain': [1] },
+    #     {'mean': [0.5], 'sigma': [0.2], 'gain': [0.5] },
+    # ]
+
+    kinds = [   
+        #  {'mean': [0.2], 'sigma': [0.2], 'gain': [0.3] },
+        #  {'mean': [0.8], 'sigma': [0.2], 'gain': [0.3] },
+        #  {'mean': [0.2], 'sigma': [0.2], 'gain': [0.9] },
+        #  {'mean': [0.8], 'sigma': [0.2], 'gain': [0.9] },
+        #  {'mean': [0.5], 'sigma': [0.2], 'gain': [0.5] },
+        #  {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },
+
+
+        {'mean': [(0.5,0.5)], 'sigma': [(0.2,0.2)], 'gain': [(0.1,0.9)] }, # only gain is variable    # 1 gaussian with variable parameters
+        {'mean': [(0.1,0.9)], 'sigma': [(0.2,0.2)], 'gain': [(0.5,0.5)] }, # only mean is variable
+        {'mean': [(0.5,0.5)], 'sigma': [(0.1,0.5)], 'gain': [(0.5,0.5)] }, # only sigma is variable
+        # {'mean': [(0.2,0.8)], 'sigma': [(0.2,0.2)], 'gain': [(0.2,0.8)] }, # gain and mean variables
+        {'mean': [(0.2,0.8)], 'sigma': [(0.1,0.5)], 'gain': [(0.2,0.8)] }, # 3 parameters variables
+
+
+        # {'mean': [(0.1,0.9),(0.1,0.9)], 'sigma': [(0.2,0.2),(0.2,0.2)], 'gain': [(0.1,0.9),(0.1,0.9)] },  # sum of 2 gaussians with variable parameters
+        # {'mean': [(0.1,0.2),(0.4,0.5),(0.8,0.9)], 'sigma': [(0.1,0.3),(0.1,0.3),(0.1,0.3)], 'gain': [(0.1,0.3),(0.1,0.3),(0.1,0.3)] },
     ]
+
+
 
 
     def __init__(self, counts=60000, size=20, noise_var=0., nanprob=None, nanmask=None, fixed_nanmask=None):
@@ -159,23 +190,76 @@ class Dummy_g1data(models.base.Dataset):
         return self._counts
 
     def gen_pt(self, id=None, x=None, kind=None):
+
+        #### Gaussian
         def gauss(x, m, s, g):
             return np.abs(np.exp(-np.power(x-m, 2.) / (2 * np.power(s, 2.))) * g + np.random.normal(0,self._noise,1))
+
+        def dsx3(x, a, b, c):
+            return (1 - np.power(x,a)) + np.power((1 - np.power(x,b)),c)
+
         if self._dataset is not None and id is not None:
             data = self._dataset[id]
             return np.stack([data['x'],data['y']], axis=1), data['l']
         else:
             if x is None:
-                x = np.sort(np.random.rand(self._size))
+                # uniform array of x :
+                x = np.linspace(0,1,self._size)
+                #x = np.sort(np.random.rand(self._size)) # previous way : random array
             y = np.zeros_like(x)        
             if kind is None:
                 kind = np.random.randint(len(self.kinds))
             k = self.kinds[kind]
-            if len(np.shape(k['mean'])) > 0:
-                for m,s,g in np.stack([k['mean'],k['sigma'],k['gain']],axis=1):
-                    y += gauss(x,m,s,g)
-            else:
-                y = gauss(x,k['mean'],k['sigma'],k['gain'])
+
+            # print(list(k.keys())[0])
+
+
+            if list(k.keys())[0] == 'mean':
+
+                if type(k['mean'][0])==tuple:           
+                    for i in range(len(k['mean'])):
+                        m = k['mean'][i][0] + np.random.sample(1)[0]*(k['mean'][i][1]-k['mean'][i][0])
+                        s = k['sigma'][i][0] + np.random.sample(1)[0]*(k['sigma'][i][1]-k['sigma'][i][0])
+                        g = k['gain'][i][0] + np.random.sample(1)[0]*(k['gain'][i][1]-k['gain'][i][0])
+                        y += gauss(x,m,s,g)
+                else:
+                    for i in range(len(k['mean'])):
+                        m = k['mean'][i]
+                        s = k['sigma'][i]
+                        g = k['gain'][i]
+                        y += gauss(x,m,s,g)
+
+            
+            
+            elif list(k.keys())[0] == 'A':
+
+                if type(k['A'][0])==tuple:
+                    for i in range(len(k['A'])):
+                        a = k['A'][i][0] + np.random.sample(1)[0]*(k['A'][i][1]-k['A'][i][0])
+                        b = k['B'][i][0] + np.random.sample(1)[0]*(k['B'][i][1]-k['B'][i][0])
+                        c = k['C'][i][0] + np.random.sample(1)[0]*(k['C'][i][1]-k['C'][i][0])
+                        y += dsx3(x,a,b,c)
+                else:
+                    for i in range(len(k['A'])):
+                        a = k['A'][i]
+                        b = k['B'][i]
+                        c = k['C'][i]
+                        y += dsx3(x,a,b,c)
+
+                
+
+
+                # to remove :
+                #if len(np.shape(k['mean'])) > 0 and 
+                #for m,s,g in k['mean'],k['sigma'],k['gain']: # doesn't work
+                # for m in k['mean'] :
+                #     if isinstance(m,tuple): m = m[0] + np.random.sample(1)[0]*(m[1]-m[0])
+                # for s in k['sigma'] :
+                #     if isinstance(s,tuple): s = s[0] + np.random.sample(1)[0]*(s[1]-s[0])
+                # for g in k['gain'] :
+                #     if isinstance(g,tuple): g = g[0] + np.random.sample(1)[0]*(g[1]-g[0])
+                #y = gauss(x,k['mean'],k['sigma'],k['gain'])
+
             
             mask = np.zeros_like(x)
             if self._nanprob is not None:
