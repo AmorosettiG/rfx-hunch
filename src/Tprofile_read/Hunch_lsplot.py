@@ -5,6 +5,8 @@ from __future__ import print_function
 import Hunch_utils as Htils
 
 import Dummy_g1data
+import Dummy_dsx3
+
 import Dataset_QSH
 
 import numpy as np
@@ -279,11 +281,12 @@ class LSPlotBokeh(LSPlot):
         if feed_data is None: self._feed_data = self._data.ds_array
         else                : self._feed_data = feed_data
         ds = self._data
-        if isinstance(ds, Dummy_g1data.Dummy_g1data) and show_kinds is True:
+        if (isinstance(ds, Dummy_g1data.Dummy_g1data) or isinstance (ds, Dummy_dsx3.Dummy_dsx3)) and show_kinds is True:
             # from bokeh.palettes import Category10
             # import itertools
             # colors = itertools.cycle(Category10[10])
             dx = 1/ds._size
+            # x=np.linspace(0.,1.,20)
             x = np.linspace(0+dx/2,1-dx/2,ds._size*10)  # spaced x axis
             for i,_ in enumerate(ds.kinds,0):
                 xy,_ = ds.gen_pt(x=x, kind=i)
@@ -369,6 +372,8 @@ class LSPlotBokeh(LSPlot):
         if isinstance(XY, list): XY = XY[0]   # if list of outputs take first one
         X,Y = tf.split(XY[0], 2)        
         data = dict( x=X.numpy(), y=Y.numpy() )
+        # data = dict( x=np.linspace(0,1,20), y=Y.numpy() )
+
         if target_data is None:
             self._data_gn.data = data
         else:
@@ -788,25 +793,25 @@ class LSPlotViolin(LSPlotBokeh):
 
 
 
-    # def set_data(self, data, feed_data=None, counts=200, show_kinds=True):
-    #     self._data = data
-    #     self._counts = counts
-    #     self._cold = []
-    #     if feed_data is None: self._feed_data = self._data.ds_array
-    #     else                : self._feed_data = feed_data
-    #     ds = self._data
-    #     if isinstance(ds, Dummy_g1data.Dummy_g1data) and show_kinds is True:
-    #         # from bokeh.palettes import Category10
-    #         # import itertools
-    #         # colors = itertools.cycle(Category10[10])
-    #         dx = 1/ds._size
-    #         x = np.linspace(0+dx/2,1-dx/2,ds._size*10)  # spaced x axis
-    #         for i,_ in enumerate(ds.kinds,0):
-    #             xy,_ = ds.gen_pt(x=x, kind=i)
-    #             self._cold.append( LSPlotViolin.ColumnDataSource(data=dict(x=xy[:,0],y=xy[:,1]))  )
-    #             self._figure_gn.line('x','y',source=self._cold[i], line_width=5, line_alpha=0.6, color=self._mapper4.palette[i] )
-    #     if self._model is not None:
-    #         self.update_ls()
+    def set_data(self, data, feed_data=None, counts=200, show_kinds=True):
+        self._data = data
+        self._counts = counts
+        self._cold = []
+        if feed_data is None: self._feed_data = self._data.ds_array
+        else                : self._feed_data = feed_data
+        ds = self._data
+        if (isinstance(ds, Dummy_g1data.Dummy_g1data) or isinstance (ds, Dummy_dsx3.Dummy_dsx3)) and show_kinds is True:
+            # from bokeh.palettes import Category10
+            # import itertools
+            # colors = itertools.cycle(Category10[10])
+            dx = 1/ds._size
+            x = np.linspace(0+dx/2,1-dx/2,ds._size*10)  # spaced x axis
+            for i,_ in enumerate(ds.kinds,0):
+                xy,_ = ds.gen_pt(x=x, kind=i)
+                self._cold.append( LSPlotViolin.ColumnDataSource(data=dict(x=xy[:,0],y=xy[:,1]))  )
+                self._figure_gn.line('x','y',source=self._cold[i], line_width=5, line_alpha=0.6, color=self._mapper4.palette[i] )
+        if self._model is not None:
+            self.update_ls()
 
     def update(self):
         if self._model is not None and self._data is not None:

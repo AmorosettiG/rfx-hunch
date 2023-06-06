@@ -6,6 +6,8 @@ import numpy as np
 import tensorflow as tf
 import abc
 
+import random as rd
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.colors as colors 
@@ -46,44 +48,6 @@ class ComposableAccess(Htls.Struct):
 class Dummy_dsx3(models.base.Dataset):
 
 
-#        ____                               _                 
-#   / ___|   __ _   _   _   ___   ___  (_)   __ _   _ __  
-#  | |  _   / _` | | | | | / __| / __| | |  / _` | | '_ \ 
-#  | |_| | | (_| | | |_| | \__ \ \__ \ | | | (_| | | | | |
-#   \____|  \__,_|  \__,_| |___/ |___/ |_|  \__,_| |_| |_|
-                                                        
-
-
-    # kinds = [
-    #     {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },   # this is sum of 2 gaussion with fixed parameters   
-    #     {'mean': [0.8], 'sigma': [0.1], 'gain': [0.5] },           # 1 gaussian with fixed parameters
-    #     {'mean': [0.2], 'sigma': [0.1], 'gain': [0.5] },
-    #     {'mean': [0.5], 'sigma': [0.2], 'gain': [1] },
-    #     {'mean': [0.5], 'sigma': [0.2], 'gain': [0.5] },
-    # ]
-
-    # kinds = [   
-        #  {'mean': [0.2], 'sigma': [0.2], 'gain': [0.3] },
-        #  {'mean': [0.8], 'sigma': [0.2], 'gain': [0.3] },
-        #  {'mean': [0.2], 'sigma': [0.2], 'gain': [0.9] },
-        #  {'mean': [0.8], 'sigma': [0.2], 'gain': [0.9] },
-        #  {'mean': [0.5], 'sigma': [0.2], 'gain': [0.5] },
-        #  {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },
-
-
-        # {'mean': [(0.5,0.5)], 'sigma': [(0.2,0.2)], 'gain': [(0.1,0.9)] }, # only gain is variable    # 1 gaussian with variable parameters
-        # {'mean': [(0.1,0.9)], 'sigma': [(0.2,0.2)], 'gain': [(0.5,0.5)] }, # only mean is variable
-        # {'mean': [(0.5,0.5)], 'sigma': [(0.1,0.5)], 'gain': [(0.5,0.5)] }, # only sigma is variable
-        # {'mean': [(0.2,0.8)], 'sigma': [(0.2,0.2)], 'gain': [(0.2,0.8)] }, # gain and mean variables
-        # {'mean': [(0.2,0.8)], 'sigma': [(0.1,0.5)], 'gain': [(0.2,0.8)] }, # 3 parameters variables
-
-
-        # {'mean': [(0.1,0.9),(0.1,0.9)], 'sigma': [(0.2,0.2),(0.2,0.2)], 'gain': [(0.1,0.9),(0.1,0.9)] },  # sum of 2 gaussians with variable parameters
-        # {'mean': [(0.1,0.2),(0.4,0.5),(0.8,0.9)], 'sigma': [(0.1,0.3),(0.1,0.3),(0.1,0.3)], 'gain': [(0.1,0.3),(0.1,0.3),(0.1,0.3)] },
-    # ]
-
-
-
 #       ____    ____   __  __  _____ 
 #  |  _ \  / ___|  \ \/ / |___ / 
 #  | | | | \___ \   \  /    |_ \ 
@@ -94,18 +58,35 @@ class Dummy_dsx3(models.base.Dataset):
 
         ################ QSH 
         # (random values in ranges)
-        {'A': [(1.4,4.)], 'B': [(6.,16.)], 'C': [(4.,12.)] },
+        # {'A': [(1.4,4.)], 'B': [(6.,16.)], 'C': [(4.,12.)] },
+
+        # {'A': [(1.4,4.)], 'B': [(8.,8.)], 'C': [(8.,8.)] },
+        # {'A': [(1.8,1.8)], 'B': [(6.,16.)], 'C': [(8.,8.)] },
+        # {'A': [(1.8,1.8)], 'B': [(8.,8.)], 'C': [(4.,12.)] },
 
         # (fixed values)
         # {'A': [1.8], 'B': [8.], 'C': [8.] },
 
-
         ################ MH 
         #(random values in ranges)
-        {'A': [(1.,2.5)], 'B': [(3.,7.)], 'C': [(0.8,2.5)] },
+        #{'A': [(1.,2.5)], 'B': [(3.,7.)], 'C': [(0.8,2.5)] },
 
         # (fixed values)
         # {'A': [1.4], 'B': [5.], 'C': [1.5] },
+
+
+        ################ Test parabola + gaussians/parabola 
+        # {'A': [(0.2,0.8)], 'B': [(4.,7.)], 'C': [(0.1,1.)] },
+
+
+        ################ Test for dsx3 formula without physical meaning
+        {'A': [(0.2,0.8)], 'B': [(0.,400.)], 'C': [(0.,200.)] }, 
+        # in this case A is the mean of the peak, B is the height of the max, C is max of flat gaussian
+
+        # {'A': [(0.2,0.8)], 'B': [(100.,100.)], 'C': [(700.,700.)] },
+        # {'A': [(0.5,0.5)], 'B': [(0.,100.)], 'C': [(700.,700.)] },
+        # {'A': [(0.5,0.5)], 'B': [(100.,100.)], 'C': [(500.,700.)] },
+
 
     ] 
 
@@ -232,12 +213,54 @@ class Dummy_dsx3(models.base.Dataset):
 
     def gen_pt(self, id=None, x=None, kind=None):
 
-        #### Gaussian
-        def gauss(x, m, s, g):
-            return np.abs(np.exp(-np.power(x-m, 2.) / (2 * np.power(s, 2.))) * g + np.random.normal(0,self._noise,1))
+        #### DSX3
+        """
+        def dsx3(x, a, b, c): # when trying with helix formula
 
-        def dsx3(x, a, b, c):
-            return (1 - np.power(x,a)) + np.power((1 - np.power(x,b)),c)
+            # return (1 - np.power(x - (1/2)  ,a))  + np.power((1 - np.power(x,b)),c)
+            # return np.power(1-x,a)
+
+            # x = np.array(x, dtype=np.complex)
+            # y = (1. - (x-0.5)**a)
+            # x=np.array(x, dtype=np.float)
+            # y=np.array(y, dtype=np.float)
+
+            # return (1. - (x-0.5)**a)
+            # return (1 - np.power(np.abs(x - (1/2))  ,a))  + np.power((1 - np.power(np.abs(x),b)),c)
+
+
+            ############### test parabola + parabola/gaussians
+            A = c - b*np.power(x - a  ,2)
+            B = 0.2 - 0.5*np.power(x - 0.5  ,2)
+            return A*(A>0)+B*(B>0)
+
+        """
+
+        def dsx3(x,a,b,c): # trying to match the real data but without physical meaning
+
+            p = 12
+            A = np.exp(-np.power(x-0.5, p) / (2 * np.power(0.41, p))) * c
+            B = np.abs(np.exp(-np.power(x-a, 2.) / (2 * np.power(0.06, 2.))) * b)
+
+            S = A*(A>0) + B*(B>0)
+
+            # l=len(S)
+            # d=15
+            # for i in range(0,l):
+            #     S[i]=S[i]+rd.randint(-d,d)
+
+            # r = rd.randint(2,7)
+            # for i in range(r):
+            #     S[rd.randint(0,self._size-1)]=np.nan
+
+            S=S/800
+
+            return S
+
+
+
+
+
 
         if self._dataset is not None and id is not None:
             data = self._dataset[id]
@@ -245,7 +268,10 @@ class Dummy_dsx3(models.base.Dataset):
         else:
             if x is None:
                 # uniform array of x :
-                x = np.linspace(0,1,self._size)
+                
+                x = np.linspace(0.,1.,self._size)
+                # x = np.linspace(-10,10,self._size)
+
                 #x = np.sort(np.random.rand(self._size)) # previous way : random array
             y = np.zeros_like(x)        
             if kind is None:
@@ -255,7 +281,8 @@ class Dummy_dsx3(models.base.Dataset):
             # print(list(k.keys())[0])
 
 
-            if list(k.keys())[0] == 'mean':
+            if list(k.keys())[0] == 'mean':     
+            # This was to separate kinds for dsx3 and gaussians when they were generated by the same .py code
 
                 if type(k['mean'][0])==tuple:           
                     for i in range(len(k['mean'])):
@@ -273,6 +300,7 @@ class Dummy_dsx3(models.base.Dataset):
             
             
             elif list(k.keys())[0] == 'A':
+            # This was to separate kinds for dsx3 and gaussians when they were generated by the same .py code
 
                 if type(k['A'][0])==tuple:
                     for i in range(len(k['A'])):

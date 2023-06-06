@@ -55,7 +55,7 @@ class Dummy_g1data(models.base.Dataset):
 
 
     # kinds = [
-    #     {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },   # this is sum of 2 gaussion with fixed parameters   
+    #     {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },   # this is sum of 2 gaussian with fixed parameters   
     #     {'mean': [0.8], 'sigma': [0.1], 'gain': [0.5] },           # 1 gaussian with fixed parameters
     #     {'mean': [0.2], 'sigma': [0.1], 'gain': [0.5] },
     #     {'mean': [0.5], 'sigma': [0.2], 'gain': [1] },
@@ -71,11 +71,11 @@ class Dummy_g1data(models.base.Dataset):
         #  {'mean': [0.2,0.8], 'sigma': [0.1,0.1], 'gain': [1,1] },
 
 
-        {'mean': [(0.5,0.5)], 'sigma': [(0.2,0.2)], 'gain': [(0.1,0.9)] }, # only gain is variable    # 1 gaussian with variable parameters
-        {'mean': [(0.1,0.9)], 'sigma': [(0.2,0.2)], 'gain': [(0.5,0.5)] }, # only mean is variable
-        {'mean': [(0.5,0.5)], 'sigma': [(0.1,0.5)], 'gain': [(0.5,0.5)] }, # only sigma is variable
-        # {'mean': [(0.2,0.8)], 'sigma': [(0.2,0.2)], 'gain': [(0.2,0.8)] }, # gain and mean variables
-        {'mean': [(0.2,0.8)], 'sigma': [(0.1,0.5)], 'gain': [(0.2,0.8)] }, # 3 parameters variables
+        # {'mean': [(0.5,0.5)], 'sigma': [(0.2,0.2)], 'gain': [(0.1,0.9)] }, # only gain is variable    # 1 gaussian with variable parameters
+        # {'mean': [(0.1,0.9)], 'sigma': [(0.2,0.2)], 'gain': [(0.5,0.5)] }, # only mean is variable
+        # {'mean': [(0.5,0.5)], 'sigma': [(0.1,0.5)], 'gain': [(0.5,0.5)] }, # only sigma is variable
+        {'mean': [(0.2,0.8)], 'sigma': [(0.2,0.2)], 'gain': [(0.2,0.8)] }, # gain and mean variables
+        # {'mean': [(0.2,0.8)], 'sigma': [(0.1,0.5)], 'gain': [(0.2,0.8)] }, # 3 parameters variables
 
 
         # {'mean': [(0.1,0.9),(0.1,0.9)], 'sigma': [(0.2,0.2),(0.2,0.2)], 'gain': [(0.1,0.9),(0.1,0.9)] },  # sum of 2 gaussians with variable parameters
@@ -195,8 +195,6 @@ class Dummy_g1data(models.base.Dataset):
         def gauss(x, m, s, g):
             return np.abs(np.exp(-np.power(x-m, 2.) / (2 * np.power(s, 2.))) * g + np.random.normal(0,self._noise,1))
 
-        def dsx3(x, a, b, c):
-            return (1 - np.power(x,a)) + np.power((1 - np.power(x,b)),c)
 
         if self._dataset is not None and id is not None:
             data = self._dataset[id]
