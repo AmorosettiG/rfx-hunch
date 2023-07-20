@@ -199,7 +199,15 @@ class RecordMetrics(tf.keras.callbacks.Callback):
     def __init__(self):
         self.metrics = { 
             'loss':[],
+            'val_loss':[],
             }
+        
+        
+    # def on_test_end(self, logs=None):        
+    # #    self.metrics['val_loss'].append( tf.reduce_mean(logs.get('loss')) )
+    #    for m in self.model.metrics:
+    #        self.metrics['val_'+m.name].append(m.result().numpy())            
+    #    return super().on_test_end(logs=logs)
 
     # def on_train_begin(self, logs=None):
     #     for m in self.metrics:
@@ -207,16 +215,23 @@ class RecordMetrics(tf.keras.callbacks.Callback):
     #     return super().on_train_begin(logs=logs)
 
 
-    def on_train_batch_end(self, batch, logs=None):        
-        self.metrics['loss'].append( tf.reduce_mean(logs.get('loss')) )
-        for m in self.model.metrics:
-            self.metrics[m.name].append(m.result().numpy())            
-        return super().on_train_batch_end(batch, logs=logs)
+    def on_epoch_end(self, batch, logs=None):   
+        keys = list(logs.keys())
+        print("\n\nStop epoch; got log keys: {}".format(keys))
+        
+        self.metrics['loss'].append( logs['loss'] )
+        self.metrics['val_loss'].append( logs['val_loss'] )
+        print(logs['loss'],logs['val_loss'],'\n')
+
+        # for m in self.model.metrics:
+        #     self.metrics[m.name].append(m.result().numpy())  
+                      
+        return super().on_epoch_end(batch, logs=logs)
         
     def set_model(self, model):
         self.model = model
         for m in model.metrics:
-            self.metrics.update( {m.name:[]} )
+            self.metrics.update( {m.name:[], 'val_'+ m.name:[]} )
 
 
 class BetaAnnealing(tf.keras.callbacks.Callback):

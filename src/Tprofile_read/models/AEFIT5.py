@@ -61,6 +61,7 @@ class AEFIT5(models.base.VAE):
         def mkl(x,y): return self.mkl_loss 
         def b(x,y): return self.beta
         def mse(x,y): return tf.reduce_mean(self.loss(x,y))
+
         self.compile(
             #optimizer  = tf.keras.optimizers.SGD(learning_rate=1e-3),
             #optimizer  = tf.keras.optimizers.Adagrad(learning_rate=1e-3),
