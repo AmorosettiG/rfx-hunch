@@ -7,7 +7,7 @@
 - [2] Franz, P., Gobbin, M., Marrelli, L., Ruzzon, A., Bonomo, F., Fassina, A., Martines, E., & Spizzo, G. (2013, April 23). Experimental investigation of electron temperature dynamics of helical states in the RFX-Mod reversed field pinch. Nuclear Fusion, 53(5), 053011. [doi.org/10.1088/0029-5515/53/5/053011](https://doi.org/10.1088/0029-5515/53/5/053011)
 
 &nbsp;
-
+(Large data files availables here : [gitlab.com/AmorosettiG/rfx-hunch](https://gitlab.com/AmorosettiG/rfx-hunch))
 -----------------------------------------------------------------
 
 
