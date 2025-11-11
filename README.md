@@ -1,6 +1,7 @@
-# RFX-Hunch
+# RFX-Hunch 
 
 Participation to the RFX-Hunch project during my internship at the [Consorzio RFX](https://github.com/consorzio-rfx) from March to July 2023, supervised by [A. Rigoni Garola](https://github.com/AndreaRigoni).
+<p align="center"> <img src="https://crf.unipd.it/sites/crf.unipd.it/files/logoRFXdaUgonsmail.png" width="180" height="100"> </p>
 
 ## **Characterization of a new deep learning approach** [1] **for data recovery in the Soft X-Ray fusion plasma diagnostics** [2] **in RFX-mod**
 
